@@ -1,0 +1,63 @@
+
+> @coder/libghostty-vt-node@0.1.0 build:libghostty
+> scripts/build-libghostty-vt.sh
+
+From https://github.com/ghostty-org/ghostty
+ * branch                48ccec182a932c2ec04c344d45a5fc553861cb13 -> FETCH_HEAD
+HEAD is now at 48ccec182 ci: fix vouch-check-issue to checkout the template file (#12412)
+Building libghostty-vt at Ghostty commit 48ccec182a932c2ec04c344d45a5fc553861cb13
+error: undefined symbol: __availability_version_check
+    note: referenced by /Users/thomask33/.cache/zig/o/8cfa15f510d85730135433e2f42ddfd8/libcompiler_rt.a(libcompiler_rt_zcu.o):___isPlatformVersionAtLeast
+error: undefined symbol: _abort
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.abort
+error: undefined symbol: _arc4random_buf
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_crypto.tlcsprng.tlsCsprngFill
+error: undefined symbol: _bzero
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_hash_map.HashMapUnmanaged(usize,*debug.SelfInfo.Module__struct_3895,hash_map.AutoContext(usize),80).initMetadatas
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_hash_map.HashMapUnmanaged([]const u8,u64,hash_map.StringContext,80).initMetadatas
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_hash_map.HashMapUnmanaged([]const u8,debug.SelfInfo.Module__struct_3895.OFileInfo,hash_map.StringContext,80).initMetadatas
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_Build.Watch.FsEvents.wait
+    note: referenced 14 more times
+error: undefined symbol: _clock_gettime
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.clock_gettime
+error: undefined symbol: _dispatch_queue_create
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_Build.Watch.FsEvents.init
+error: undefined symbol: _dispatch_semaphore_create
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_Build.Watch.FsEvents.init
+error: undefined symbol: _dispatch_semaphore_signal
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_Build.Watch.FsEvents.eventCallback
+error: undefined symbol: _dispatch_semaphore_wait
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_Build.Watch.FsEvents.wait
+error: undefined symbol: _dispatch_time
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_Build.Watch.FsEvents.wait
+error: undefined symbol: _exit
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.exit
+error: undefined symbol: _fcopyfile
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_fs.File.Writer.sendFile
+error: undefined symbol: _fork
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.fork
+error: undefined symbol: _free
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_heap.CAllocator.alignedFree
+error: undefined symbol: _getcwd
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.getcwd
+error: undefined symbol: _getenv
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.getenvZ
+error: undefined symbol: _isatty
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.isatty
+error: undefined symbol: _malloc_size
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_heap.CAllocator.alignedAllocSize
+error: undefined symbol: _posix_memalign
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_heap.CAllocator.alignedAlloc
+error: undefined symbol: _realpath$DARWIN_EXTSN
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.realpathZ
+error: undefined symbol: _sigaction
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.sigaction
+error: undefined symbol: _sigemptyset
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.sigemptyset
+error: undefined symbol: _sysctlbyname
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.sysctlbynameZ
+error: undefined symbol: _waitpid
+    note: referenced by .zig-cache/o/0ef0335be7a527a9e3eb98418e651f74/build_zcu.o:_posix.waitpid
+error: failed to build libghostty-vt from Ghostty 48ccec182a932c2ec04c344d45a5fc553861cb13
+Verify that Zig 0.15.2 can build a simple project on this machine and that the platform SDK is discoverable.
+On macOS, check `xcrun --show-sdk-path` and the Xcode command line tools selected by `xcode-select -p`.

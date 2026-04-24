@@ -1,0 +1,13 @@
+
+> @coder/libghostty-vt-node@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.5 /Users/thomask33/Projects/libghostty-vt-node
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed | 4 skipped (6)
+   Start at  16:06:17
+   Duration  137ms (transform 62ms, setup 0ms, import 89ms, tests 4ms, environment 0ms)
+

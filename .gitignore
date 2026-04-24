@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+prebuilds/
+vendor/
+.zig-cache/
+zig-out/
+*.log
+!dogfood/bootstrap/session.log
+*.tsbuildinfo
+coverage/
+.DS_Store

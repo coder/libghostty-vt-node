@@ -1,0 +1,61 @@
+{
+  "name": "@coder/libghostty-vt-node",
+  "version": "0.1.0",
+  "description": "ABI-stable Node-API bindings for Ghostty libghostty-vt terminal semantics.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "native",
+    "scripts",
+    "binding.gyp",
+    "prebuilds",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "install": "node -e \"console.log('native build is explicit: run npm run build:native')\"",
+    "build": "tsc -p tsconfig.json",
+    "build:libghostty": "scripts/build-libghostty-vt.sh",
+    "build:native": "node-gyp rebuild",
+    "build:prebuild": "prebuildify --napi",
+    "test": "vitest run",
+    "smoke": "tsx examples/smoke.ts",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm test && npm run smoke",
+    "verify:prebuilds": "node scripts/verify-prebuilds.mjs"
+  },
+  "keywords": [
+    "ghostty",
+    "libghostty",
+    "terminal",
+    "napi",
+    "node-api"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.3.1",
+    "node-gyp-build": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "node-gyp": "^12.1.0",
+    "prebuildify": "^6.0.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "prebuildify": {
+    "napi": true
+  }
+}

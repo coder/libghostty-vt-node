@@ -1,0 +1,121 @@
+# @coder/libghostty-vt-node
+
+ABI-stable Node-API bindings for Ghostty's `libghostty-vt` terminal state engine.
+
+This package exposes terminal VT/state semantics for Node.js consumers: feed terminal bytes, resize the terminal, read visible plain text, and extract a structured snapshot of visible rows and styled cells.
+
+It is not a screenshot, PNG, video, browser, or GUI renderer. HTML/plain formatting, where exposed, is for debugging and export only. Raster rendering remains outside this package's scope.
+
+## Upstream References
+
+This bootstrap was written against:
+
+- Ghostty repository commit `48ccec182a932c2ec04c344d45a5fc553861cb13`
+- go-libghostty commit `542c76ff595ad533348e23aac74489ad095e0b36`, used only as API inspiration
+- Ghostty VT docs: <https://ghostty.org/docs/vt>
+- libghostty Doxygen: <https://libghostty.tip.ghostty.org/>
+- Node-API docs: <https://nodejs.org/api/n-api.html>
+
+The binding talks to `libghostty-vt` directly through the C API. It has no runtime dependency on `go-libghostty`.
+
+## API
+
+```ts
+import { createTerminal, getNativeInfo } from "@coder/libghostty-vt-node";
+
+const term = createTerminal({ cols: 80, rows: 24, scrollbackLimit: 1000 });
+term.feed("hello\n");
+term.feed("\x1b[31mred\x1b[0m");
+
+console.log(getNativeInfo());
+console.log(term.getVisibleText());
+console.log(term.snapshot({ includeCells: true }));
+
+term.dispose();
+```
+
+The public contract is intentionally small:
+
+- `createTerminal({ cols, rows, scrollbackLimit })`
+- `feed(data)`, `resize(cols, rows)`, `snapshot(options)`, `getVisibleText()`
+- optional debug formatters `formatPlain()` and `formatHtml()`
+- explicit, idempotent `dispose()`
+- `getNativeInfo()` for package, Node-API, platform, and Ghostty build metadata
+
+All dimensions are validated as positive integers. Using a terminal after `dispose()` throws.
+
+## Native Build
+
+The addon uses `node-addon-api` over Node-API/N-API and is built with `node-gyp`. Runtime loading uses `node-gyp-build`, so npm packages can ship prebuilt `.node` files.
+
+For local development:
+
+```sh
+npm install
+npm run build:libghostty
+npm run build:native
+npm run build
+npm test
+npm run smoke
+```
+
+`npm run build:libghostty` fetches the pinned Ghostty commit into `vendor/ghostty` and installs a static `libghostty-vt` into `vendor/libghostty-vt`. The default uses `-Dsimd=false` for a dependency-minimal static library. Set `LIBGHOSTTY_VT_SIMD=true` to build SIMD support when your build environment supports it.
+
+You can also provide an existing install:
+
+```sh
+LIBGHOSTTY_VT_PREFIX=/path/to/libghostty-vt npm run build:native
+```
+
+or:
+
+```sh
+LIBGHOSTTY_VT_INCLUDE_DIR=/path/to/include \
+LIBGHOSTTY_VT_STATIC_LIB=/path/to/libghostty-vt.a \
+npm run build:native
+```
+
+If `libghostty-vt` is unavailable, `node-gyp` fails early with a setup message from `scripts/resolve-libghostty-vt.mjs`. If the built addon cannot load, the ESM loader throws a clear error with the expected recovery commands.
+
+## Prebuilds
+
+The intended distribution path is prebuilt binaries bundled in npm packages via `npm run build:prebuild` and loaded by `node-gyp-build`. The script is named `build:prebuild` rather than `prebuild` so `npm run build` does not trigger npm's `prebuild` lifecycle hook.
+
+GitHub Actions run the same mise tasks used in development. Keep build, test, and prebuild commands in `mise.toml`; the workflow YAML should only contain GitHub-specific orchestration such as runner matrices and artifact uploads.
+
+To reset a workflow to the mise-generated baseline:
+
+```sh
+mise gen github-action --write --task ci --name ci
+mise gen github-action --write --task release-prebuilds --name release-prebuilds
+```
+
+If a generated workflow is reset, reapply only the matrix/upload orchestration. Do not duplicate pipeline commands in `.github/workflows/*.yml`; those commands live in the `ci` and `release-prebuilds` mise tasks.
+
+Initial targets:
+
+- Linux x64
+- Linux arm64
+- macOS arm64
+- macOS x64
+
+Windows is documented as unsupported for the initial package. Ghostty has C API support for Windows, but this package should only enable Windows after the build and prebuild path is verified.
+
+## Development Notes
+
+The native layer currently uses these verified `libghostty-vt` C APIs:
+
+- terminal lifecycle and stream processing: `ghostty_terminal_new`, `ghostty_terminal_vt_write`, `ghostty_terminal_resize`, `ghostty_terminal_free`
+- metadata and state: `ghostty_terminal_get`, `ghostty_build_info`
+- plain/HTML debug formatting: `ghostty_formatter_terminal_new`, `ghostty_formatter_format_alloc`
+- structured snapshots: `ghostty_terminal_grid_ref`, `ghostty_grid_ref_cell`, `ghostty_grid_ref_graphemes`, `ghostty_grid_ref_style`, `ghostty_cell_get`
+
+The upstream API is still marked unstable by Ghostty. Keep the pinned commit updated intentionally and rerun the dogfood bundle after each pin change.
+
+## Known Limitations
+
+- No screenshot, PNG, WebM, browser, or GUI rendering API is provided.
+- Structured snapshots expose visible cells and optional scrollback lines, not the full Ghostty render-state API.
+- Grapheme and style extraction follows the current C API and may need adjustment when Ghostty changes ABI.
+- Release publishing is not wired yet; the prebuild workflow currently uploads prebuild artifacts for later release handling.
+- On macOS, Zig native target discovery may require an explicit SDK/sysroot setup depending on the local Xcode/Zig combination.

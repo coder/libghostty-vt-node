@@ -1,0 +1,25 @@
+[tools]
+node = "25.9"
+zig = "0.15.2"
+
+[tasks.ci]
+description = "Install dependencies, build libghostty-vt/native/TypeScript, run tests, and run smoke."
+run = [
+  "npm ci",
+  "npm run build:libghostty",
+  "npm run build:native",
+  "npm run build",
+  "npm test",
+  "npm run smoke",
+]
+
+[tasks.release-prebuilds]
+description = "Build and verify npm-bundled Node-API prebuild artifacts."
+run = [
+  "npm ci",
+  "npm run build:libghostty",
+  "npm run build",
+  "npm run build:prebuild",
+  "npm run verify:prebuilds",
+  "npm pack --dry-run",
+]

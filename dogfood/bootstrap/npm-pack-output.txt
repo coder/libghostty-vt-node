@@ -1,0 +1,38 @@
+npm notice
+npm notice 📦  @coder/libghostty-vt-node@0.1.0
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 5.6kB README.md
+npm notice 1.2kB binding.gyp
+npm notice 418B dist/index.d.ts
+npm notice 376B dist/index.d.ts.map
+npm notice 3.2kB dist/index.js
+npm notice 3.1kB dist/index.js.map
+npm notice 325B dist/loader.d.ts
+npm notice 334B dist/loader.d.ts.map
+npm notice 2.0kB dist/loader.js
+npm notice 1.7kB dist/loader.js.map
+npm notice 1.7kB dist/types.d.ts
+npm notice 1.9kB dist/types.d.ts.map
+npm notice 44B dist/types.js
+npm notice 102B dist/types.js.map
+npm notice 346B native/addon.cc
+npm notice 2.3kB native/libghostty_vt_shim.cc
+npm notice 549B native/libghostty_vt_shim.hh
+npm notice 19.6kB native/terminal.cc
+npm notice 1.8kB native/terminal.hh
+npm notice 1.5kB package.json
+npm notice 2.9kB scripts/build-libghostty-vt.sh
+npm notice 1.8kB scripts/resolve-libghostty-vt.mjs
+npm notice 755B scripts/verify-prebuilds.mjs
+npm notice Tarball Details
+npm notice name: @coder/libghostty-vt-node
+npm notice version: 0.1.0
+npm notice filename: coder-libghostty-vt-node-0.1.0.tgz
+npm notice package size: 14.9 kB
+npm notice unpacked size: 54.8 kB
+npm notice shasum: 3f0dcbb66cc2931a58ee4954b68d00717b2e4d9e
+npm notice integrity: sha512-GA2ucjo7iJW24[...]bQWFxo7mLm8KA==
+npm notice total files: 24
+npm notice
+coder-libghostty-vt-node-0.1.0.tgz

@@ -1,0 +1,10 @@
+date=2026-04-24T14:06:15Z
+cwd=/Users/thomask33/Projects/libghostty-vt-node
+node=v25.9.0
+npm=11.12.1
+zig=0.15.2
+platform=Darwin Mac.fritz.box 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:31:56 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6030 arm64
+xcode_path=/Applications/Xcode.app/Contents/Developer
+sdkroot=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+ghostty_commit=48ccec182a932c2ec04c344d45a5fc553861cb13
+go_libghostty_commit=542c76ff595ad533348e23aac74489ad095e0b36

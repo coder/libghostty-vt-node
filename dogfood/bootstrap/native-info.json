@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "error": "Failed to load @coder/libghostty-vt-node native addon. Build it with `npm run build:native`, or use an npm package that includes a matching prebuild. If building locally, provide libghostty-vt with `npm run build:libghostty` or LIBGHOSTTY_VT_PREFIX.",
+  "cause": "No native build was found for platform=darwin arch=arm64 runtime=node abi=141 uv=1 armv=8 libc=glibc node=25.9.0\n    loaded from: /Users/thomask33/Projects/libghostty-vt-node\n"
+}

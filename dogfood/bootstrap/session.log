@@ -1,0 +1,41 @@
+^D
+> @coder/libghostty-vt-node@0.1.0 test
+> vitest run
+
+[?25l
+ RUN  v4.1.5 /Users/thomask33/Projects/libghostty-vt-node
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed | 4 skipped (6)
+   Start at  16:06:30
+   Duration  118ms (transform 49ms, setup 0ms, import 71ms, tests 4ms, environment 0ms)
+
+[?25h⠙[1G[0K
+> @coder/libghostty-vt-node@0.1.0 smoke
+> tsx examples/smoke.ts
+
+/Users/thomask33/Projects/libghostty-vt-node/src/loader.ts:39
+    throw new Error(
+          ^
+
+Error: Failed to load @coder/libghostty-vt-node native addon. Build it with `npm run build:native`, or use an npm package that includes a matching prebuild. If building locally, provide libghostty-vt with `npm run build:libghostty` or LIBGHOSTTY_VT_PREFIX.
+    at loadNative (/Users/thomask33/Projects/libghostty-vt-node/src/loader.ts:39:11)
+    at createTerminal (/Users/thomask33/Projects/libghostty-vt-node/src/index.ts:127:23)
+    ... 3 lines matching cause stack trace ...
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  [cause]: Error: No native build was found for platform=darwin arch=arm64 runtime=node abi=141 uv=1 armv=8 libc=glibc node=25.9.0
+      loaded from: /Users/thomask33/Projects/libghostty-vt-node
+  
+      at load.resolve.load.path (/Users/thomask33/Projects/libghostty-vt-node/node_modules/node-gyp-build/node-gyp-build.js:60:9)
+      at load (/Users/thomask33/Projects/libghostty-vt-node/node_modules/node-gyp-build/node-gyp-build.js:22:30)
+      at loadNative (/Users/thomask33/Projects/libghostty-vt-node/src/loader.ts:34:19)
+      at createTerminal (/Users/thomask33/Projects/libghostty-vt-node/src/index.ts:127:23)
+      at <anonymous> (/Users/thomask33/Projects/libghostty-vt-node/examples/smoke.ts:3:14)
+      at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+      at async node:internal/modules/esm/loader:639:26
+      at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+}
+
+Node.js v25.9.0
+⠙[1G[0K
