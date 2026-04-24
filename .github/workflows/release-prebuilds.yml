@@ -9,6 +9,7 @@ concurrency:
 
 env:
   MISE_EXPERIMENTAL: true
+  MISE_LOCKED: true
 
 jobs:
   release-prebuilds:
@@ -25,8 +26,6 @@ jobs:
             os: ubuntu-24.04-arm
           - target: macos-arm64
             os: macos-14
-          - target: macos-x64
-            os: macos-15-intel
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3

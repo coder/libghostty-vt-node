@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const sourceRoot = resolve(process.argv[2] ?? join(root, ".release-artifacts"));
 const targetRoot = resolve(process.argv[3] ?? join(root, "prebuilds"));
 const expectedPlatforms = (
-  process.env.EXPECTED_PREBUILD_PLATFORMS ?? "darwin-arm64,darwin-x64,linux-arm64,linux-x64"
+  process.env.EXPECTED_PREBUILD_PLATFORMS ?? "darwin-arm64,linux-arm64,linux-x64"
 )
   .split(",")
   .map((value) => value.trim())
