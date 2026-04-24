@@ -31,6 +31,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
+        with:
+          install_args: node zig
       - run: mise run release-prebuilds
       - uses: actions/upload-artifact@v4
         with:

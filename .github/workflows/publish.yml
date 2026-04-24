@@ -51,6 +51,8 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.ref }}
       - uses: jdx/mise-action@v3
+        with:
+          install_args: node zig
       - run: mise run release-prebuilds
       - uses: actions/upload-artifact@v4
         with:
