@@ -23,3 +23,28 @@ run = [
   "npm run verify:prebuilds",
   "npm pack --dry-run",
 ]
+
+[tasks.assemble-prebuilds]
+description = "Assemble per-platform GitHub Actions prebuild artifacts into npm package layout."
+run = "npm run assemble:prebuilds"
+
+[tasks.publish-dry-run]
+description = "Assemble release artifacts and verify the npm package that would be published."
+run = [
+  "npm ci",
+  "npm run build",
+  "mise run assemble-prebuilds",
+  "npm run verify:prebuilds",
+  "npm pack --dry-run",
+]
+
+[tasks.publish]
+description = "Assemble release artifacts and publish the npm package with trusted publishing."
+run = [
+  "npm ci",
+  "npm run build",
+  "mise run assemble-prebuilds",
+  "npm run verify:prebuilds",
+  "npm pack --dry-run",
+  "npm publish --access public --tag \"${NPM_PUBLISH_TAG:-beta}\"",
+]

@@ -21,6 +21,9 @@
     "type": "git",
     "url": "git+https://github.com/coder/libghostty-vt-node.git"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -49,7 +52,8 @@
     "smoke": "tsx examples/smoke.ts",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm test && npm run smoke",
-    "verify:prebuilds": "node scripts/verify-prebuilds.mjs"
+    "verify:prebuilds": "node scripts/verify-prebuilds.mjs",
+    "assemble:prebuilds": "node scripts/assemble-prebuilds.mjs"
   },
   "dependencies": {
     "node-addon-api": "^8.3.1",

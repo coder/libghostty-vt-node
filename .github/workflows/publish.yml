@@ -1,0 +1,68 @@
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        description: "npm dist-tag to publish under"
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - next
+          - latest
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  MISE_EXPERIMENTAL: true
+
+jobs:
+  prebuilds:
+    name: prebuilds (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            os: ubuntu-latest
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+          - target: macos-arm64
+            os: macos-14
+          - target: macos-x64
+            os: macos-15-intel
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+      - run: mise run release-prebuilds
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prebuilds-${{ matrix.target }}
+          path: prebuilds/**
+          if-no-files-found: error
+
+  publish:
+    name: publish to npm (${{ inputs.npm_tag }})
+    needs: prebuilds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v3
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: prebuilds-*
+          path: .release-artifacts
+      - run: mise run publish
+        env:
+          NPM_PUBLISH_TAG: ${{ inputs.npm_tag }}
