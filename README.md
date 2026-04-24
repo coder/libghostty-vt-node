@@ -92,12 +92,11 @@ mise gen github-action --write --task release-prebuilds --name release-prebuilds
 
 If a generated workflow is reset, reapply only the matrix/upload orchestration. Do not duplicate pipeline commands in `.github/workflows/*.yml`; those commands live in the `ci` and `release-prebuilds` mise tasks.
 
-Initial targets:
+Default published prebuild targets:
 
 - Linux x64
 - Linux arm64
 - macOS arm64
-- macOS x64
 
 Windows is documented as unsupported for the initial package. Ghostty has C API support for Windows, but this package should only enable Windows after the build and prebuild path is verified.
 
