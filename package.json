@@ -2,6 +2,25 @@
   "name": "@coder/libghostty-vt-node",
   "version": "0.1.0",
   "description": "ABI-stable Node-API bindings for Ghostty libghostty-vt terminal semantics.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "keywords": [
+    "ghostty",
+    "libghostty",
+    "terminal",
+    "napi",
+    "node-api"
+  ],
+  "homepage": "https://github.com/coder/libghostty-vt-node#readme",
+  "bugs": {
+    "url": "https://github.com/coder/libghostty-vt-node/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coder/libghostty-vt-node.git"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,17 +50,6 @@
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm test && npm run smoke",
     "verify:prebuilds": "node scripts/verify-prebuilds.mjs"
-  },
-  "keywords": [
-    "ghostty",
-    "libghostty",
-    "terminal",
-    "napi",
-    "node-api"
-  ],
-  "license": "MIT",
-  "engines": {
-    "node": ">=20.19"
   },
   "dependencies": {
     "node-addon-api": "^8.3.1",
