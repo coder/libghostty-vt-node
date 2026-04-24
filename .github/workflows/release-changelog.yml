@@ -1,0 +1,93 @@
+name: release-changelog
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  MISE_EXPERIMENTAL: true
+  MISE_LOCKED: true
+
+jobs:
+  changelog:
+    name: update changelog
+    if: github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: write
+      contents: write
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: jdx/mise-action@v3
+      - id: prepare
+        name: Check release version
+        run: node .github/scripts/prepare-release-changelog.mjs "$BASE_SHA"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          RELEASE_BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+      - name: Generate CHANGELOG.md entry
+        if: steps.prepare.outputs.should_generate == 'true'
+        run: |
+          set -euo pipefail
+
+          args=(--changelog --repo "$GITHUB_REPOSITORY")
+
+          if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+            :
+          elif [[ -n "${OPENAI_API_KEY:-}" && -n "${COMMUNIQUE_MODEL:-}" ]]; then
+            args+=(--provider openai --model "$COMMUNIQUE_MODEL")
+          else
+            echo "::error::Set ANTHROPIC_API_KEY, or set OPENAI_API_KEY and repository variable COMMUNIQUE_MODEL, before generating release changelogs."
+            exit 1
+          fi
+
+          communique generate "$TAG_NAME" "${args[@]}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          COMMUNIQUE_MODEL: ${{ vars.COMMUNIQUE_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TAG_NAME: ${{ steps.prepare.outputs.tag_name }}
+      - name: Commit changelog update
+        if: steps.prepare.outputs.should_generate == 'true'
+        id: commit
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: update changelog for ${TAG_NAME}"
+          git push origin "HEAD:${PR_BRANCH}"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+        env:
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          TAG_NAME: ${{ steps.prepare.outputs.tag_name }}
+      - name: Dispatch CI for updated release branch
+        if: steps.prepare.outputs.should_generate == 'true' && steps.commit.outputs.committed == 'true'
+        run: gh workflow run ci.yml --ref "$PR_BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}

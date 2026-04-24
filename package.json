@@ -39,6 +39,7 @@
     "scripts",
     "binding.gyp",
     "prebuilds",
+    "CHANGELOG.md",
     "README.md",
     "LICENSE"
   ],

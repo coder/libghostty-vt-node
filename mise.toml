@@ -1,4 +1,5 @@
 [tools]
+communique = "1.0.3"
 node = "25.9"
 zig = "0.15.2"
 

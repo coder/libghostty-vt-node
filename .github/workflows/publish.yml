@@ -23,6 +23,7 @@ concurrency:
 
 env:
   MISE_EXPERIMENTAL: true
+  MISE_LOCKED: true
 
 jobs:
   prebuilds:
@@ -66,7 +67,9 @@ jobs:
     permissions:
       contents: write
       actions: read
+      issues: read
       id-token: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v6
         with:
@@ -77,11 +80,62 @@ jobs:
         with:
           pattern: prebuilds-*
           path: .release-artifacts
+      - id: release
+        name: Resolve release metadata
+        run: |
+          set -euo pipefail
+          package_version="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")"
+          npm_dist_tag="$(node scripts/resolve-npm-publish-tag.mjs)"
+          echo "tag_name=v${package_version}" >> "$GITHUB_OUTPUT"
+          echo "npm_dist_tag=${npm_dist_tag}" >> "$GITHUB_OUTPUT"
+        env:
+          NPM_PUBLISH_TAG: ${{ github.event.inputs.npm_tag || '' }}
       - run: mise run create-release-tag
         if: github.event_name == 'pull_request'
         env:
           RELEASE_BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
           RELEASE_TARGET_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+      - name: Verify release tag
+        run: |
+          set -euo pipefail
+          git fetch --tags origin
+          git rev-parse --verify --quiet "refs/tags/${TAG_NAME}^{commit}" >/dev/null
+        env:
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+      - id: communique
+        name: Generate GitHub Release notes
+        run: |
+          set -euo pipefail
+
+          notes_file="${RUNNER_TEMP}/communique-release.md"
+          args=(--repo "$GITHUB_REPOSITORY" --output "$notes_file")
+
+          if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+            :
+          elif [[ -n "${OPENAI_API_KEY:-}" && -n "${COMMUNIQUE_MODEL:-}" ]]; then
+            args+=(--provider openai --model "$COMMUNIQUE_MODEL")
+          else
+            echo "::error::Set ANTHROPIC_API_KEY, or set OPENAI_API_KEY and repository variable COMMUNIQUE_MODEL, before publishing."
+            exit 1
+          fi
+
+          communique generate "$TAG_NAME" "${args[@]}"
+          test -s "$notes_file"
+          echo "notes_file=${notes_file}" >> "$GITHUB_OUTPUT"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          COMMUNIQUE_MODEL: ${{ vars.COMMUNIQUE_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
       - run: mise run publish
         env:
-          NPM_PUBLISH_TAG: ${{ inputs.npm_tag }}
+          NPM_PUBLISH_TAG: ${{ github.event.inputs.npm_tag || '' }}
+      - name: Create or update GitHub Release
+        run: node .github/scripts/create-or-update-github-release.mjs "$TAG_NAME" "$NOTES_FILE"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_DIST_TAG: ${{ steps.release.outputs.npm_dist_tag }}
+          NOTES_FILE: ${{ steps.communique.outputs.notes_file }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}

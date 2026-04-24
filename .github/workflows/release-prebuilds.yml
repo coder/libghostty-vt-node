@@ -9,6 +9,7 @@ concurrency:
 
 env:
   MISE_EXPERIMENTAL: true
+  MISE_LOCKED: true
 
 jobs:
   release-prebuilds:

@@ -1,0 +1,19 @@
+system_extra = """
+Additional project-specific rules:
+- Write plain Markdown with no emoji.
+- Prioritize user-facing npm package, TypeScript API, native binding, and terminal behavior changes before internal maintenance.
+- Call out packaging, prebuild, Node-API, Node.js version, and platform support changes when they affect installation or runtime behavior.
+- Keep release notes concise and factual. Do not inflate internal CI, release automation, or dependency-only work unless it changes what package users can install or run.
+- Ignore version-only release commits, package-lock version-only updates, release tag commits, and changelog automation commits unless they include user-facing release content.
+- For CHANGELOG.md entries, use Keep a Changelog-style categories and omit empty sections.
+"""
+
+context = """
+@coder/libghostty-vt-node is an npm package that ships ABI-stable Node-API bindings for Ghostty's libghostty-vt terminal semantics. The package publishes compiled native prebuilds through npm for linux-x64, linux-arm64, macos-arm64, and macos-x64. Users install the package from npm and load the native binding from Node.js; GitHub Releases document the release but do not carry binary assets.
+"""
+
+[defaults]
+repo = "coder/libghostty-vt-node"
+emoji = false
+verify_links = true
+match_style = true
