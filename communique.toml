@@ -9,7 +9,7 @@ Additional project-specific rules:
 """
 
 context = """
-@coder/libghostty-vt-node is an npm package that ships ABI-stable Node-API bindings for Ghostty's libghostty-vt terminal semantics. The package publishes compiled native prebuilds through npm for linux-x64, linux-arm64, macos-arm64, and macos-x64. Users install the package from npm and load the native binding from Node.js; GitHub Releases document the release but do not carry binary assets.
+@coder/libghostty-vt-node is an npm package that ships ABI-stable Node-API bindings for Ghostty's libghostty-vt terminal semantics. The package publishes compiled native prebuilds through npm for linux-x64, linux-arm64, and macos-arm64. Users install the package from npm and load the native binding from Node.js; GitHub Releases document the release but do not carry binary assets.
 """
 
 [defaults]
