@@ -76,7 +76,7 @@ This release was published to npm as \`${installTarget}\` with the \`${npmDistTa
 
 ## Platform Support
 
-The npm package includes Node-API prebuilds for linux-x64, linux-arm64, macos-arm64, and macos-x64. Node.js ${packageJson.engines.node} is required. Native binaries are distributed through npm; this GitHub Release does not attach separate binary assets.`;
+The npm package includes Node-API prebuilds for linux-x64, linux-arm64, and macos-arm64. Node.js ${packageJson.engines.node} is required. Native binaries are distributed through npm; this GitHub Release does not attach separate binary assets.`;
 }
 
 function gh(args, options = {}) {
