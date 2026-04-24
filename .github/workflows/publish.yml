@@ -4,14 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       npm_tag:
-        description: "npm dist-tag to publish under"
-        required: true
-        default: beta
-        type: choice
-        options:
-          - beta
-          - next
-          - latest
+        description: "Optional npm dist-tag override. Leave unset for tag-derived beta/alpha/rc/latest."
+        required: false
+        default: ""
+        type: string
+  push:
+    tags:
+      - "v*.*.*"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -48,7 +47,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: publish to npm (${{ inputs.npm_tag }})
+    name: publish to npm
     needs: prebuilds
     runs-on: ubuntu-latest
     timeout-minutes: 20

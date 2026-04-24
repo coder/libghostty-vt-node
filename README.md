@@ -101,6 +101,25 @@ Initial targets:
 
 Windows is documented as unsupported for the initial package. Ghostty has C API support for Windows, but this package should only enable Windows after the build and prebuild path is verified.
 
+## Releases
+
+Publishing is handled by `.github/workflows/publish.yml` with npm Trusted Publishing. The normal release path is tag-driven:
+
+```sh
+npm version prerelease --preid beta
+git push origin main --tags
+```
+
+The publish workflow runs on `v*.*.*` tags, builds all prebuild artifacts, assembles them into the npm package layout, verifies the local platform prebuild, and publishes to npm. The workflow fails if the Git tag does not match `package.json` exactly, such as `v0.1.0-beta.0`.
+
+The npm dist-tag is derived from the package version:
+
+- `0.1.0-beta.0` publishes with `--tag beta`
+- `0.1.0-rc.0` publishes with `--tag rc`
+- `0.1.0` publishes with `--tag latest`
+
+Manual dispatch is available for recovery or explicit dist-tag overrides, but release tags should be the default path.
+
 ## Development Notes
 
 The native layer currently uses these verified `libghostty-vt` C APIs:

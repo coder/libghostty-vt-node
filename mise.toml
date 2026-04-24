@@ -35,6 +35,7 @@ run = [
   "npm run build",
   "mise run assemble-prebuilds",
   "npm run verify:prebuilds",
+  "npm run resolve:publish-tag",
   "npm pack --dry-run",
 ]
 
@@ -45,6 +46,7 @@ run = [
   "npm run build",
   "mise run assemble-prebuilds",
   "npm run verify:prebuilds",
+  "npm run resolve:publish-tag",
   "npm pack --dry-run",
-  "npm publish --access public --tag \"${NPM_PUBLISH_TAG:-beta}\"",
+  "npm publish --access public --tag \"$(node scripts/resolve-npm-publish-tag.mjs)\"",
 ]

@@ -2,9 +2,6 @@ name: release-prebuilds
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*.*.*"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
