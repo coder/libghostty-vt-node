@@ -103,14 +103,19 @@ Windows is documented as unsupported for the initial package. Ghostty has C API 
 
 ## Releases
 
-Publishing is handled by `.github/workflows/publish.yml` with npm Trusted Publishing. The normal release path is tag-driven:
+Publishing is handled by `.github/workflows/publish.yml` with npm Trusted Publishing. The normal release path is a protected-main PR from a branch named `release/v*`:
 
 ```sh
-npm version prerelease --preid beta
-git push origin main --tags
+git checkout main
+git pull --ff-only origin main
+git checkout -b release/v0.1.0-beta.1
+npm version 0.1.0-beta.1 --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "Release v0.1.0-beta.1"
+git push origin release/v0.1.0-beta.1
 ```
 
-The publish workflow runs on `v*.*.*` tags, builds all prebuild artifacts, assembles them into the npm package layout, verifies the local platform prebuild, and publishes to npm. The workflow fails if the Git tag does not match `package.json` exactly, such as `v0.1.0-beta.0`.
+Open that branch as a PR into `main`. When the PR is merged, the publish workflow builds all prebuild artifacts from the merge commit, creates the matching Git tag, assembles the npm package layout, verifies the local platform prebuild, and publishes to npm. The workflow fails if the release branch does not match `package.json` exactly, such as `release/v0.1.0-beta.1`.
 
 The npm dist-tag is derived from the package version:
 
@@ -118,7 +123,7 @@ The npm dist-tag is derived from the package version:
 - `0.1.0-rc.0` publishes with `--tag rc`
 - `0.1.0` publishes with `--tag latest`
 
-Manual dispatch is available for recovery or explicit dist-tag overrides, but release tags should be the default path.
+Manual dispatch and direct `v*.*.*` tag pushes are available for recovery, but merged `release/v*` PRs should be the default path.
 
 ## Development Notes
 
@@ -136,5 +141,4 @@ The upstream API is still marked unstable by Ghostty. Keep the pinned commit upd
 - No screenshot, PNG, WebM, browser, or GUI rendering API is provided.
 - Structured snapshots expose visible cells and optional scrollback lines, not the full Ghostty render-state API.
 - Grapheme and style extraction follows the current C API and may need adjustment when Ghostty changes ABI.
-- Release publishing is not wired yet; the prebuild workflow currently uploads prebuild artifacts for later release handling.
 - On macOS, Zig native target discovery may require an explicit SDK/sysroot setup depending on the local Xcode/Zig combination.

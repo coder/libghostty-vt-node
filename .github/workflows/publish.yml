@@ -11,6 +11,11 @@ on:
   push:
     tags:
       - "v*.*.*"
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,8 +27,11 @@ env:
 jobs:
   prebuilds:
     name: prebuilds (${{ matrix.target }})
+    if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v'))
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -38,6 +46,9 @@ jobs:
             os: macos-15-intel
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.ref }}
       - uses: jdx/mise-action@v3
       - run: mise run release-prebuilds
       - uses: actions/upload-artifact@v4
@@ -49,19 +60,28 @@ jobs:
   publish:
     name: publish to npm
     needs: prebuilds
+    if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/v'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: read
+      contents: write
       actions: read
       id-token: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.ref }}
       - uses: jdx/mise-action@v3
       - uses: actions/download-artifact@v4
         with:
           pattern: prebuilds-*
           path: .release-artifacts
+      - run: mise run create-release-tag
+        if: github.event_name == 'pull_request'
+        env:
+          RELEASE_BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+          RELEASE_TARGET_SHA: ${{ github.event.pull_request.merge_commit_sha }}
       - run: mise run publish
         env:
           NPM_PUBLISH_TAG: ${{ inputs.npm_tag }}
