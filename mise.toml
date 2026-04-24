@@ -28,6 +28,10 @@ run = [
 description = "Assemble per-platform GitHub Actions prebuild artifacts into npm package layout."
 run = "npm run assemble:prebuilds"
 
+[tasks.create-release-tag]
+description = "Create the package-version Git tag for a merged release/v* PR."
+run = "npm run release:create-tag"
+
 [tasks.publish-dry-run]
 description = "Assemble release artifacts and verify the npm package that would be published."
 run = [

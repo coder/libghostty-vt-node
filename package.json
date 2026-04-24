@@ -54,6 +54,7 @@
     "verify": "npm run typecheck && npm test && npm run smoke",
     "verify:prebuilds": "node scripts/verify-prebuilds.mjs",
     "assemble:prebuilds": "node scripts/assemble-prebuilds.mjs",
+    "release:create-tag": "node scripts/create-release-tag.mjs",
     "resolve:publish-tag": "node scripts/resolve-npm-publish-tag.mjs"
   },
   "dependencies": {
