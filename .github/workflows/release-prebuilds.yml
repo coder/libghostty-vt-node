@@ -33,7 +33,7 @@ jobs:
       - uses: jdx/mise-action@v3
         with:
           install_args: node zig
-      - run: mise run release-prebuilds
+      - run: mise run --skip-tools release-prebuilds
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilds-${{ matrix.target }}
