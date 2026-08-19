@@ -4,6 +4,9 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## Added
+- Mode-aware mouse encoding through each terminal instance. The binding reads the child-negotiated Ghostty tracking mode and wire format, accepts explicit surface geometry and pressed-button state, and returns the exact bytes to write to the child PTY.
+
 ## [v0.1.0-beta.1](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.1) - 2026-04-24
 
 ## Added
