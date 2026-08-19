@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTerminal } from "../src/index.js";
+import { createTerminal, supportsMouseInput } from "../src/index.js";
 import { nativeSupport } from "./native-support.js";
 
 const support = nativeSupport();
@@ -13,6 +13,10 @@ const unitGeometry = {
 };
 
 describe("createTerminal validation", () => {
+  it("advertises mouse-input support without allocating a terminal", () => {
+    expect(supportsMouseInput).toBe(true);
+  });
+
   it("validates positive dimensions before loading native state", () => {
     expect(() => createTerminal({ cols: 0, rows: 24 })).toThrow(/cols/);
     expect(() => createTerminal({ cols: 80, rows: 0 })).toThrow(/rows/);

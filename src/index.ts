@@ -31,6 +31,9 @@ export type {
   VisibleLine,
 } from "./types.js";
 
+/** Import-time capability marker for consumers which must avoid native allocation. */
+export const supportsMouseInput = true;
+
 function assertPositiveInteger(name: string, value: unknown): asserts value is number {
   if (!Number.isInteger(value) || (value as number) <= 0) {
     throw new TypeError(`${name} must be a positive integer`);
