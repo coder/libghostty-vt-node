@@ -27,6 +27,21 @@ const term = createTerminal({ cols: 80, rows: 24, scrollbackLimit: 1000 });
 term.feed("hello\n");
 term.feed("\x1b[31mred\x1b[0m");
 
+// The child enables normal mouse tracking plus SGR encoding.
+term.feed("\x1b[?1000h\x1b[?1006h");
+const mouseBytes = term.encodeMouse(
+  { action: "press", button: "left", x: 25, y: 45 },
+  {
+    geometry: {
+      screenWidth: 800,
+      screenHeight: 600,
+      cellWidth: 10,
+      cellHeight: 20,
+    },
+  },
+);
+// Write mouseBytes to the child PTY.
+
 console.log(getNativeInfo());
 console.log(term.getVisibleText());
 console.log(term.snapshot({ includeCells: true }));
@@ -38,11 +53,31 @@ The public contract is intentionally small:
 
 - `createTerminal({ cols, rows, scrollbackLimit })`
 - `feed(data)`, `resize(cols, rows)`, `snapshot(options)`, `getVisibleText()`
+- `encodeMouse(event, options)` for mode-aware terminal mouse bytes
 - optional debug formatters `formatPlain()` and `formatHtml()`
 - explicit, idempotent `dispose()`
 - `getNativeInfo()` for package, Node-API, platform, and Ghostty build metadata
 
 All dimensions are validated as positive integers. Using a terminal after `dispose()` throws.
+
+### Mouse encoding
+
+`encodeMouse` returns a `Buffer` containing the terminal input bytes for one
+normalized mouse event. It returns an empty buffer when the child has mouse
+tracking disabled or when its negotiated mode suppresses that event. The child
+selects X10, UTF-8, SGR, URXVT, or SGR-pixels through the output previously
+passed to `feed`; callers do not choose a wire format independently.
+
+Event coordinates are finite surface-space numbers. Geometry is explicit so
+SGR-pixels remains accurate and the other formats can map the same position to
+a terminal cell. `anyButtonPressed` supplies the caller-owned aggregate button
+state needed for drag events outside the viewport. `trackLastCell` asks Ghostty
+to suppress duplicate motion events within one unchanged cell.
+
+Buttons `four`, `five`, `six`, and `seven` conventionally represent wheel up,
+wheel down, wheel left, and wheel right. The binding keeps Ghostty's names at
+this low-level API boundary so consumers can provide their own user-facing
+aliases.
 
 ## Native Build
 
@@ -130,6 +165,7 @@ The native layer currently uses these verified `libghostty-vt` C APIs:
 
 - terminal lifecycle and stream processing: `ghostty_terminal_new`, `ghostty_terminal_vt_write`, `ghostty_terminal_resize`, `ghostty_terminal_free`
 - metadata and state: `ghostty_terminal_get`, `ghostty_build_info`
+- mode-aware mouse input: `ghostty_mouse_encoder_*`, `ghostty_mouse_event_*`
 - plain/HTML debug formatting: `ghostty_formatter_terminal_new`, `ghostty_formatter_format_alloc`
 - structured snapshots: `ghostty_terminal_grid_ref`, `ghostty_grid_ref_cell`, `ghostty_grid_ref_graphemes`, `ghostty_grid_ref_style`, `ghostty_cell_get`
 
