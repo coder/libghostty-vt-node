@@ -1,6 +1,6 @@
 [tools]
 communique = "1.0.3"
-node = "25.9"
+node = "26.12.1"
 zig = "0.15.2"
 
 [tasks.ci]
