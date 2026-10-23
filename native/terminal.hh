@@ -24,8 +24,10 @@ class TerminalWrap final : public Napi::ObjectWrap<TerminalWrap> {
 
   void DisposeNative();
   GhosttyTerminal RequireTerminal(Napi::Env env);
+  GhosttyMouseEncoder RequireMouseEncoder(Napi::Env env);
   Napi::Value Feed(const Napi::CallbackInfo& info);
   Napi::Value Resize(const Napi::CallbackInfo& info);
+  Napi::Value EncodeMouse(const Napi::CallbackInfo& info);
   Napi::Value Snapshot(const Napi::CallbackInfo& info);
   Napi::Value GetVisibleText(const Napi::CallbackInfo& info);
   Napi::Value FormatPlain(const Napi::CallbackInfo& info);
@@ -41,6 +43,10 @@ class TerminalWrap final : public Napi::ObjectWrap<TerminalWrap> {
   std::string ResolveStyleColor(const GhosttyStyleColor& color);
 
   GhosttyTerminal terminal_ = nullptr;
+  GhosttyMouseEncoder mouse_encoder_ = nullptr;
+  bool mouse_modes_dirty_ = true;
+  bool mouse_size_configured_ = false;
+  GhosttyMouseEncoderSize mouse_size_ = {};
 };
 
 Napi::Value CreateTerminal(const Napi::CallbackInfo& info);

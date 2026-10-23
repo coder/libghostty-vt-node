@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <limits>
 #include <stdexcept>
 
@@ -31,9 +32,137 @@ size_t NonNegativeSize(Napi::Env env, const Napi::Value& value, const char* name
   return static_cast<size_t>(number);
 }
 
+uint32_t PositiveUint32(Napi::Env env, const Napi::Value& value, const char* name) {
+  if (!value.IsNumber()) {
+    throw Napi::TypeError::New(env, std::string(name) + " must be a positive integer");
+  }
+  const double number = value.As<Napi::Number>().DoubleValue();
+  if (!std::isfinite(number) || number <= 0 || number != std::floor(number) ||
+      number > std::numeric_limits<uint32_t>::max()) {
+    throw Napi::RangeError::New(env, std::string(name) + " must be a positive 32-bit integer");
+  }
+  return static_cast<uint32_t>(number);
+}
+
+uint32_t NonNegativeUint32(Napi::Env env, const Napi::Value& value, const char* name) {
+  if (!value.IsNumber()) {
+    throw Napi::TypeError::New(env, std::string(name) + " must be a non-negative integer");
+  }
+  const double number = value.As<Napi::Number>().DoubleValue();
+  if (!std::isfinite(number) || number < 0 || number != std::floor(number) ||
+      number > std::numeric_limits<uint32_t>::max()) {
+    throw Napi::RangeError::New(env, std::string(name) + " must be a non-negative 32-bit integer");
+  }
+  return static_cast<uint32_t>(number);
+}
+
+float FiniteFloat(Napi::Env env, const Napi::Value& value, const char* name) {
+  if (!value.IsNumber()) {
+    throw Napi::TypeError::New(env, std::string(name) + " must be a finite number");
+  }
+  const double number = value.As<Napi::Number>().DoubleValue();
+  if (!std::isfinite(number) || number < -std::numeric_limits<float>::max() ||
+      number > std::numeric_limits<float>::max()) {
+    throw Napi::RangeError::New(env, std::string(name) + " must be a finite 32-bit float");
+  }
+  return static_cast<float>(number);
+}
+
+// Validate the same f32 grid calculation Ghostty performs before its u16 cast.
+// Widen padding sums first so hostile u32 input cannot wrap during validation.
+void ValidateMouseAxis(Napi::Env env, uint32_t screen, uint32_t cell,
+                       uint64_t padding, const char* name) {
+  if (padding > screen) {
+    throw Napi::RangeError::New(env, std::string("mouse geometry padding exceeds ") + name);
+  }
+  const float cells = static_cast<float>(screen - padding) / static_cast<float>(cell);
+  if (cells >= 65536) {
+    throw Napi::RangeError::New(env, std::string("mouse geometry.") + name + " exceeds the 65535-cell limit");
+  }
+}
+
+// Positions cross the C API as f32, then Ghostty removes padding in f64.
+// Reject values that cannot reach either cell or pixel encoding safely.
+float MouseCoordinate(Napi::Env env, const Napi::Value& value, const char* name,
+                      uint32_t padding, uint32_t cell) {
+  const float position = FiniteFloat(env, value, name);
+  const double terminal_position = static_cast<double>(position) - padding;
+  if (terminal_position < std::numeric_limits<int32_t>::min() ||
+      terminal_position > std::numeric_limits<int32_t>::max() ||
+      terminal_position / cell >= 65536) {
+    throw Napi::RangeError::New(env, std::string(name) + " is outside Ghostty's cell or pixel coordinate range");
+  }
+  return position;
+}
+
+void ValidateUtf8MouseCoordinate(Napi::Env env, float position, uint32_t screen,
+                                 uint32_t cell, uint32_t before, uint32_t after,
+                                 const char* name, bool is_row) {
+  // Match Ghostty's f32 grid size and f64 position conversion, including
+  // viewport clamping. The pinned UTF-8 encoder assumes Unicode scalars and
+  // adds 33 to rows in u16 arithmetic before widening.
+  const auto cells = std::max<uint32_t>(1, static_cast<uint32_t>(
+      static_cast<float>(screen - before - after) / static_cast<float>(cell)));
+  const auto index = static_cast<uint32_t>(
+      std::max(0.0, static_cast<double>(position) - before) / cell);
+  const auto codepoint = std::min(index, cells - 1) + 33;
+  if ((codepoint >= 0xd800 && codepoint <= 0xdfff) ||
+      (is_row && codepoint > 65535)) {
+    throw Napi::RangeError::New(env, std::string(name) + " is unsafe for Ghostty's UTF-8 mouse encoding");
+  }
+}
+
+GhosttyMouseAction ParseMouseAction(Napi::Env env, const Napi::Value& value) {
+  if (!value.IsString()) throw Napi::TypeError::New(env, "mouse action must be a string");
+  const std::string action = value.As<Napi::String>().Utf8Value();
+  if (action == "press") return GHOSTTY_MOUSE_ACTION_PRESS;
+  if (action == "release") return GHOSTTY_MOUSE_ACTION_RELEASE;
+  if (action == "motion") return GHOSTTY_MOUSE_ACTION_MOTION;
+  throw Napi::RangeError::New(env, "mouse action is invalid");
+}
+
+GhosttyMouseButton ParseMouseButton(Napi::Env env, const Napi::Value& value) {
+  if (!value.IsString()) throw Napi::TypeError::New(env, "mouse button must be a string");
+  const std::string button = value.As<Napi::String>().Utf8Value();
+  if (button == "left") return GHOSTTY_MOUSE_BUTTON_LEFT;
+  if (button == "right") return GHOSTTY_MOUSE_BUTTON_RIGHT;
+  if (button == "middle") return GHOSTTY_MOUSE_BUTTON_MIDDLE;
+  if (button == "four") return GHOSTTY_MOUSE_BUTTON_FOUR;
+  if (button == "five") return GHOSTTY_MOUSE_BUTTON_FIVE;
+  if (button == "six") return GHOSTTY_MOUSE_BUTTON_SIX;
+  if (button == "seven") return GHOSTTY_MOUSE_BUTTON_SEVEN;
+  if (button == "eight") return GHOSTTY_MOUSE_BUTTON_EIGHT;
+  if (button == "nine") return GHOSTTY_MOUSE_BUTTON_NINE;
+  if (button == "ten") return GHOSTTY_MOUSE_BUTTON_TEN;
+  if (button == "eleven") return GHOSTTY_MOUSE_BUTTON_ELEVEN;
+  throw Napi::RangeError::New(env, "mouse button is invalid");
+}
+
 bool OptionBool(const Napi::Object& options, const char* name) {
   const Napi::Value value = options.Get(name);
   return value.IsBoolean() && value.As<Napi::Boolean>().Value();
+}
+
+GhosttyMods ParseMouseModifiers(Napi::Env env, const Napi::Value& value) {
+  if (value.IsUndefined()) return 0;
+  if (!value.IsObject()) throw Napi::TypeError::New(env, "mouse modifiers must be an object");
+  const Napi::Object modifiers = value.As<Napi::Object>();
+  GhosttyMods result = 0;
+  if (OptionBool(modifiers, "shift")) result |= GHOSTTY_MODS_SHIFT;
+  if (OptionBool(modifiers, "ctrl")) result |= GHOSTTY_MODS_CTRL;
+  if (OptionBool(modifiers, "alt")) result |= GHOSTTY_MODS_ALT;
+  return result;
+}
+
+bool MouseSizeEqual(const GhosttyMouseEncoderSize& left, const GhosttyMouseEncoderSize& right) {
+  return left.screen_width == right.screen_width &&
+         left.screen_height == right.screen_height &&
+         left.cell_width == right.cell_width &&
+         left.cell_height == right.cell_height &&
+         left.padding_top == right.padding_top &&
+         left.padding_bottom == right.padding_bottom &&
+         left.padding_right == right.padding_right &&
+         left.padding_left == right.padding_left;
 }
 
 void ThrowResult(Napi::Env env, const char* operation, GhosttyResult result) {
@@ -51,6 +180,7 @@ void TerminalWrap::Init(Napi::Env env, Napi::Object exports) {
       {
           InstanceMethod("feed", &TerminalWrap::Feed),
           InstanceMethod("resize", &TerminalWrap::Resize),
+          InstanceMethod("encodeMouse", &TerminalWrap::EncodeMouse),
           InstanceMethod("snapshot", &TerminalWrap::Snapshot),
           InstanceMethod("getVisibleText", &TerminalWrap::GetVisibleText),
           InstanceMethod("formatPlain", &TerminalWrap::FormatPlain),
@@ -94,14 +224,29 @@ TerminalWrap::TerminalWrap(const Napi::CallbackInfo& info)
   }
   assert(created != nullptr);
   terminal_ = created;
+
+  GhosttyMouseEncoder mouse_encoder = nullptr;
+  const GhosttyResult mouse_result = ghostty_mouse_encoder_new(nullptr, &mouse_encoder);
+  if (mouse_result != GHOSTTY_SUCCESS) {
+    ghostty_terminal_free(terminal_);
+    terminal_ = nullptr;
+    ThrowResult(env, "ghostty_mouse_encoder_new", mouse_result);
+  }
+  assert(mouse_encoder != nullptr);
+  mouse_encoder_ = mouse_encoder;
 }
 
 TerminalWrap::~TerminalWrap() { DisposeNative(); }
 
 void TerminalWrap::DisposeNative() {
-  if (terminal_ == nullptr) return;
-  ghostty_terminal_free(terminal_);
-  terminal_ = nullptr;
+  if (mouse_encoder_ != nullptr) {
+    ghostty_mouse_encoder_free(mouse_encoder_);
+    mouse_encoder_ = nullptr;
+  }
+  if (terminal_ != nullptr) {
+    ghostty_terminal_free(terminal_);
+    terminal_ = nullptr;
+  }
 }
 
 GhosttyTerminal TerminalWrap::RequireTerminal(Napi::Env env) {
@@ -109,6 +254,13 @@ GhosttyTerminal TerminalWrap::RequireTerminal(Napi::Env env) {
     throw Napi::Error::New(env, "GhosttyVtTerminal has been disposed");
   }
   return terminal_;
+}
+
+GhosttyMouseEncoder TerminalWrap::RequireMouseEncoder(Napi::Env env) {
+  if (mouse_encoder_ == nullptr) {
+    throw Napi::Error::New(env, "GhosttyVtTerminal has been disposed");
+  }
+  return mouse_encoder_;
 }
 
 Napi::Value TerminalWrap::Feed(const Napi::CallbackInfo& info) {
@@ -147,6 +299,7 @@ Napi::Value TerminalWrap::Feed(const Napi::CallbackInfo& info) {
   if (len == 0) return env.Undefined();
   assert(data != nullptr);
   ghostty_terminal_vt_write(terminal, data, len);
+  mouse_modes_dirty_ = true;
   return env.Undefined();
 }
 
@@ -165,6 +318,120 @@ Napi::Value TerminalWrap::Resize(const Napi::CallbackInfo& info) {
     ThrowResult(env, "ghostty_terminal_resize", result);
   }
   return env.Undefined();
+}
+
+// Encode against the child-negotiated terminal state while caching geometry so
+// Ghostty's same-cell motion deduplication survives unchanged input dimensions.
+Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  GhosttyTerminal terminal = RequireTerminal(env);
+  GhosttyMouseEncoder encoder = RequireMouseEncoder(env);
+  if (env.IsExceptionPending()) return env.Undefined();
+  if (info.Length() != 2 || !info[0].IsObject() || !info[1].IsObject()) {
+    throw Napi::TypeError::New(env, "encodeMouse expects event and options objects");
+  }
+
+  const Napi::Object input = info[0].As<Napi::Object>();
+  const Napi::Object options = info[1].As<Napi::Object>();
+  const Napi::Value geometry_value = options.Get("geometry");
+  if (!geometry_value.IsObject()) {
+    throw Napi::TypeError::New(env, "mouse geometry must be an object");
+  }
+  const Napi::Object geometry = geometry_value.As<Napi::Object>();
+
+  GhosttyMouseEncoderSize size = {};
+  size.size = sizeof(GhosttyMouseEncoderSize);
+  size.screen_width = PositiveUint32(env, geometry.Get("screenWidth"), "screenWidth");
+  size.screen_height = PositiveUint32(env, geometry.Get("screenHeight"), "screenHeight");
+  size.cell_width = PositiveUint32(env, geometry.Get("cellWidth"), "cellWidth");
+  size.cell_height = PositiveUint32(env, geometry.Get("cellHeight"), "cellHeight");
+  size.padding_top = NonNegativeUint32(env, geometry.Get("paddingTop"), "paddingTop");
+  size.padding_bottom = NonNegativeUint32(env, geometry.Get("paddingBottom"), "paddingBottom");
+  size.padding_right = NonNegativeUint32(env, geometry.Get("paddingRight"), "paddingRight");
+  size.padding_left = NonNegativeUint32(env, geometry.Get("paddingLeft"), "paddingLeft");
+  ValidateMouseAxis(env, size.screen_width, size.cell_width,
+                    static_cast<uint64_t>(size.padding_left) + size.padding_right, "screenWidth");
+  ValidateMouseAxis(env, size.screen_height, size.cell_height,
+                    static_cast<uint64_t>(size.padding_top) + size.padding_bottom, "screenHeight");
+  const GhosttyMousePosition position = {
+      MouseCoordinate(env, input.Get("x"), "mouse x", size.padding_left, size.cell_width),
+      MouseCoordinate(env, input.Get("y"), "mouse y", size.padding_top, size.cell_height),
+  };
+
+  bool utf8_mouse = false;
+  const GhosttyResult mode_result = ghostty_terminal_mode_get(
+      terminal, GHOSTTY_MODE_UTF8_MOUSE, &utf8_mouse);
+  if (mode_result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_terminal_mode_get", mode_result);
+  if (utf8_mouse) {
+    // Mode bits cannot identify the last selected format. Conservatively guard
+    // these exceptional cells whenever 1005 is set, even if another format was
+    // selected later. Ordinary geometry and SGR-only large grids are unchanged.
+    ValidateUtf8MouseCoordinate(env, position.x, size.screen_width, size.cell_width,
+                                size.padding_left, size.padding_right, "mouse x", false);
+    ValidateUtf8MouseCoordinate(env, position.y, size.screen_height, size.cell_height,
+                                size.padding_top, size.padding_bottom, "mouse y", true);
+  }
+
+  if (mouse_modes_dirty_) {
+    ghostty_mouse_encoder_setopt_from_terminal(encoder, terminal);
+    mouse_modes_dirty_ = false;
+  }
+  if (!mouse_size_configured_ || !MouseSizeEqual(size, mouse_size_)) {
+    ghostty_mouse_encoder_setopt(encoder, GHOSTTY_MOUSE_ENCODER_OPT_SIZE, &size);
+    mouse_size_ = size;
+    mouse_size_configured_ = true;
+  }
+  const bool any_button_pressed = OptionBool(options, "anyButtonPressed");
+  ghostty_mouse_encoder_setopt(
+      encoder, GHOSTTY_MOUSE_ENCODER_OPT_ANY_BUTTON_PRESSED, &any_button_pressed);
+  const bool track_last_cell = OptionBool(options, "trackLastCell");
+  ghostty_mouse_encoder_setopt(
+      encoder, GHOSTTY_MOUSE_ENCODER_OPT_TRACK_LAST_CELL, &track_last_cell);
+
+  GhosttyMouseEvent event = nullptr;
+  GhosttyResult result = ghostty_mouse_event_new(nullptr, &event);
+  if (result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_mouse_event_new", result);
+  assert(event != nullptr);
+
+  try {
+    ghostty_mouse_event_set_action(event, ParseMouseAction(env, input.Get("action")));
+    const Napi::Value button = input.Get("button");
+    if (button.IsUndefined()) {
+      ghostty_mouse_event_clear_button(event);
+    } else {
+      ghostty_mouse_event_set_button(event, ParseMouseButton(env, button));
+    }
+    ghostty_mouse_event_set_mods(event, ParseMouseModifiers(env, input.Get("modifiers")));
+    ghostty_mouse_event_set_position(event, position);
+
+    size_t required = 0;
+    result = ghostty_mouse_encoder_encode(encoder, event, nullptr, 0, &required);
+    if (result == GHOSTTY_SUCCESS) {
+      assert(required == 0);
+      ghostty_mouse_event_free(event);
+      return Napi::Buffer<uint8_t>::New(env, 0);
+    }
+    if (result != GHOSTTY_OUT_OF_SPACE) {
+      ThrowResult(env, "ghostty_mouse_encoder_encode(size)", result);
+    }
+    if (required == 0) {
+      throw Napi::Error::New(env, "ghostty_mouse_encoder_encode returned an empty size");
+    }
+
+    std::vector<uint8_t> output(required);
+    size_t written = 0;
+    result = ghostty_mouse_encoder_encode(
+        encoder, event, reinterpret_cast<char*>(output.data()), output.size(), &written);
+    if (result != GHOSTTY_SUCCESS) {
+      ThrowResult(env, "ghostty_mouse_encoder_encode", result);
+    }
+    assert(written <= output.size());
+    ghostty_mouse_event_free(event);
+    return Napi::Buffer<uint8_t>::Copy(env, output.data(), written);
+  } catch (...) {
+    ghostty_mouse_event_free(event);
+    throw;
+  }
 }
 
 Napi::Value TerminalWrap::Snapshot(const Napi::CallbackInfo& info) {

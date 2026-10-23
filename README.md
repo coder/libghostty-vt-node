@@ -27,6 +27,21 @@ const term = createTerminal({ cols: 80, rows: 24, scrollbackLimit: 1000 });
 term.feed("hello\n");
 term.feed("\x1b[31mred\x1b[0m");
 
+// The child enables normal mouse tracking plus SGR encoding.
+term.feed("\x1b[?1000h\x1b[?1006h");
+const mouseBytes = term.encodeMouse(
+  { action: "press", button: "left", x: 25, y: 45 },
+  {
+    geometry: {
+      screenWidth: 800,
+      screenHeight: 600,
+      cellWidth: 10,
+      cellHeight: 20,
+    },
+  },
+);
+// Write mouseBytes to the child PTY.
+
 console.log(getNativeInfo());
 console.log(term.getVisibleText());
 console.log(term.snapshot({ includeCells: true }));
@@ -38,11 +53,55 @@ The public contract is intentionally small:
 
 - `createTerminal({ cols, rows, scrollbackLimit })`
 - `feed(data)`, `resize(cols, rows)`, `snapshot(options)`, `getVisibleText()`
+- `encodeMouse(event, options)` for mode-aware terminal mouse bytes
 - optional debug formatters `formatPlain()` and `formatHtml()`
 - explicit, idempotent `dispose()`
 - `getNativeInfo()` for package, Node-API, platform, and Ghostty build metadata
+- `supportsMouseInput`, an import-time capability marker that requires no native allocation
 
 All dimensions are validated as positive integers. Using a terminal after `dispose()` throws.
+
+### Mouse encoding
+
+`encodeMouse` returns a `Buffer` containing the terminal input bytes for one
+normalized mouse event. It returns an empty buffer when the child has mouse
+tracking disabled or when its negotiated mode suppresses that event. The child
+selects X10, UTF-8, SGR, URXVT, or SGR-pixels through the output previously
+passed to `feed`; callers do not choose a wire format independently.
+
+Event coordinates are finite surface-space numbers. Geometry is explicit so
+SGR-pixels remains accurate and the other formats can map the same position to
+a terminal cell. `anyButtonPressed` supplies the caller-owned aggregate button
+state needed for drag events outside the viewport. `trackLastCell` asks Ghostty
+to suppress duplicate motion events within one unchanged cell.
+
+Geometry must describe the same grid as `createTerminal` or the latest `resize`:
+subtract padding from the screen dimensions, then divide by cell size. The
+binding does not reconcile mismatched grids. Dimensions and padding must fit
+unsigned 32-bit integers, total padding must not exceed the screen dimensions,
+and the resulting grid must fit 65535 cells per axis. Coordinates are converted
+to 32-bit floats by the C API; after padding is removed they must fit signed
+32-bit pixel coordinates and a cell index below 65536. Unrepresentable input
+throws `RangeError` before reaching Ghostty, including for suppressed events.
+Ordinary negative and off-screen positions remain supported.
+
+When UTF-8 mouse mode (1005) is set, the binding also rejects clamped cell
+coordinates whose encoded value would be a Unicode surrogate, or whose row
+would overflow the pinned encoder's 16-bit arithmetic. This conservative guard
+applies while 1005 remains set even if another mouse format was selected later.
+
+With the pinned Ghostty version, any non-empty `feed()` resets motion
+deduplication when the next mouse event refreshes negotiated modes. Geometry
+changes also reset it. SGR-pixels reports motion even within the same cell.
+
+Buttons `four`, `five`, `six`, and `seven` conventionally represent wheel up,
+wheel down, wheel left, and wheel right. The binding keeps Ghostty's names at
+this low-level API boundary so consumers can provide their own user-facing
+aliases.
+Send wheel events as `press` only: a wheel release in legacy formats is encoded
+as an ordinary button release. Buttons `ten` and `eleven` have no button codes in
+the pinned Ghostty encoder and normally produce an empty buffer; legacy release
+encoding still applies.
 
 ## Native Build
 
@@ -130,6 +189,7 @@ The native layer currently uses these verified `libghostty-vt` C APIs:
 
 - terminal lifecycle and stream processing: `ghostty_terminal_new`, `ghostty_terminal_vt_write`, `ghostty_terminal_resize`, `ghostty_terminal_free`
 - metadata and state: `ghostty_terminal_get`, `ghostty_build_info`
+- mode-aware mouse input: `ghostty_mouse_encoder_*`, `ghostty_mouse_event_*`
 - plain/HTML debug formatting: `ghostty_formatter_terminal_new`, `ghostty_formatter_format_alloc`
 - structured snapshots: `ghostty_terminal_grid_ref`, `ghostty_grid_ref_cell`, `ghostty_grid_ref_graphemes`, `ghostty_grid_ref_style`, `ghostty_cell_get`
 
