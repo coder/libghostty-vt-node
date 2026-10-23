@@ -292,6 +292,9 @@ Napi::Object TerminalWrap::BuildSnapshot(Napi::Env env, bool include_scrollback,
   if (result != GHOSTTY_SUCCESS) throw std::runtime_error(ResultMessage("ghostty_terminal_get(cursor y)", result));
   result = ghostty_terminal_get(terminal_, GHOSTTY_TERMINAL_DATA_ACTIVE_SCREEN, &active_screen);
   if (result != GHOSTTY_SUCCESS) throw std::runtime_error(ResultMessage("ghostty_terminal_get(active screen)", result));
+  bool cursor_visible = false;
+  result = ghostty_terminal_get(terminal_, GHOSTTY_TERMINAL_DATA_CURSOR_VISIBLE, &cursor_visible);
+  if (result != GHOSTTY_SUCCESS) throw std::runtime_error(ResultMessage("ghostty_terminal_get(cursor visible)", result));
 
   std::vector<Napi::Object> cells;
   Napi::Array visible_lines = Napi::Array::New(env, rows);
@@ -308,6 +311,7 @@ Napi::Object TerminalWrap::BuildSnapshot(Napi::Env env, bool include_scrollback,
   snapshot.Set("rows", Napi::Number::New(env, rows));
   snapshot.Set("cursorRow", Napi::Number::New(env, cursor_row));
   snapshot.Set("cursorCol", Napi::Number::New(env, cursor_col));
+  snapshot.Set("cursorVisible", Napi::Boolean::New(env, cursor_visible));
   snapshot.Set("isAltScreen", Napi::Boolean::New(env, active_screen == GHOSTTY_TERMINAL_SCREEN_ALTERNATE));
   snapshot.Set("visibleLines", visible_lines);
 
@@ -454,6 +458,11 @@ Napi::Object TerminalWrap::BuildCellObject(
   if (style.bold) obj.Set("bold", Napi::Boolean::New(env, true));
   if (style.italic) obj.Set("italic", Napi::Boolean::New(env, true));
   if (style.underline != 0) obj.Set("underline", Napi::Boolean::New(env, true));
+  if (style.faint) obj.Set("faint", Napi::Boolean::New(env, true));
+  // Raw SGR 7 flag. Foreground and background are reported unswapped.
+  if (style.inverse) obj.Set("inverse", Napi::Boolean::New(env, true));
+  if (style.invisible) obj.Set("invisible", Napi::Boolean::New(env, true));
+  if (style.strikethrough) obj.Set("strikethrough", Napi::Boolean::New(env, true));
 
   const std::string fg = ResolveStyleColor(style.fg_color);
   const std::string bg = ResolveStyleColor(style.bg_color);

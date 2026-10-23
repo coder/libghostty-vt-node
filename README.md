@@ -44,6 +44,8 @@ The public contract is intentionally small:
 
 All dimensions are validated as positive integers. Using a terminal after `dispose()` throws.
 
+`snapshot()` reports the cursor position (`cursorRow`, `cursorCol`) and its DECTCEM visibility (`cursorVisible`, toggled by `ESC[?25h` and `ESC[?25l`). With `includeCells: true`, each cell reports its text, width, optional `foreground` and `background` colors, and these SGR attributes: `bold`, `faint`, `italic`, `underline`, `inverse`, `invisible`, and `strikethrough`. An attribute is present only when it is set. `inverse` is the raw SGR 7 flag: `foreground` and `background` are not swapped, so consumers apply reverse video with their own default colors.
+
 ## Native Build
 
 The addon uses `node-addon-api` over Node-API/N-API and is built with `node-gyp`. Runtime loading uses `node-gyp-build`, so npm packages can ship prebuilt `.node` files.
