@@ -21,6 +21,7 @@ run = [
   "npm run build:libghostty",
   # GCC's "undefined" group leaves out float-cast-overflow.
   "CXXFLAGS=\"-fsanitize=undefined,float-cast-overflow -fno-sanitize-recover=all\" LDFLAGS=\"-fsanitize=undefined,float-cast-overflow\" npm run build:native",
+  "nm -u $(find build/Release -name '*.o') | grep -q '__ubsan_handle_.*_abort' || { echo \"error: the addon was built without UBSan\" >&2; exit 1; }",
   "npm test",
   "npm run smoke",
 ]
