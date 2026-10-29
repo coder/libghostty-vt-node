@@ -56,19 +56,19 @@ void TerminalWrap::Init(Napi::Env env, Napi::Object exports) {
           InstanceMethod("dispose", &TerminalWrap::Dispose),
       });
 
-  // Each Node environment (the main thread and every worker_threads Worker)
-  // runs Init and gets its own class. Keep the class reference in this
-  // environment's instance data, never in a static: a reference belongs to
-  // the environment that created it. Node deletes the instance data when the
-  // environment shuts down.
-  delete env.GetInstanceData<Napi::FunctionReference>();
+  // Node runs Init once for each load of the addon: once in the main thread
+  // and once in every worker_threads Worker that loads it. Each load has its
+  // own napi_env, so keep the class reference in that env's instance data,
+  // never in a static: a reference belongs to the env that created it. Node
+  // deletes the instance data when the env shuts down.
+  assert(env.GetInstanceData<Napi::FunctionReference>() == nullptr);
   env.SetInstanceData<Napi::FunctionReference>(new Napi::FunctionReference(Napi::Persistent(func)));
   exports.Set("createTerminal", Napi::Function::New(env, CreateTerminal));
 }
 
 Napi::Object TerminalWrap::Create(Napi::Env env, const Napi::Object& options) {
   Napi::FunctionReference* constructor = env.GetInstanceData<Napi::FunctionReference>();
-  assert(constructor != nullptr && "TerminalWrap::Init must run in this environment first");
+  assert(constructor != nullptr && "TerminalWrap::Init runs before createTerminal is exported");
   return constructor->New({options});
 }
 
