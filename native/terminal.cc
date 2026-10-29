@@ -171,8 +171,6 @@ void ThrowResult(Napi::Env env, const char* operation, GhosttyResult result) {
 
 }  // namespace
 
-Napi::FunctionReference TerminalWrap::constructor;
-
 void TerminalWrap::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function func = DefineClass(
       env,
@@ -188,13 +186,20 @@ void TerminalWrap::Init(Napi::Env env, Napi::Object exports) {
           InstanceMethod("dispose", &TerminalWrap::Dispose),
       });
 
-  constructor = Napi::Persistent(func);
-  constructor.SuppressDestruct();
+  // Node runs Init once for each load of the addon: once in the main thread
+  // and once in every worker_threads Worker that loads it. Each load has its
+  // own napi_env, so keep the class reference in that env's instance data,
+  // never in a static: a reference belongs to the env that created it. Node
+  // deletes the instance data when the env shuts down.
+  assert(env.GetInstanceData<Napi::FunctionReference>() == nullptr);
+  env.SetInstanceData<Napi::FunctionReference>(new Napi::FunctionReference(Napi::Persistent(func)));
   exports.Set("createTerminal", Napi::Function::New(env, CreateTerminal));
 }
 
 Napi::Object TerminalWrap::Create(Napi::Env env, const Napi::Object& options) {
-  return constructor.New({options});
+  Napi::FunctionReference* constructor = env.GetInstanceData<Napi::FunctionReference>();
+  assert(constructor != nullptr && "TerminalWrap::Init runs before createTerminal is exported");
+  return constructor->New({options});
 }
 
 TerminalWrap::TerminalWrap(const Napi::CallbackInfo& info)
