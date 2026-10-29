@@ -106,17 +106,16 @@ float MouseCoordinate(Napi::Env env, const Napi::Value& value, const char* name,
 
 void ValidateUtf8MouseCoordinate(Napi::Env env, float position, uint32_t screen,
                                  uint32_t cell, uint32_t before, uint32_t after,
-                                 const char* name, bool is_row) {
+                                 const char* name) {
   // Match Ghostty's f32 grid size and f64 position conversion, including
-  // viewport clamping. The pinned UTF-8 encoder assumes Unicode scalars and
-  // adds 33 to rows in u16 arithmetic before widening.
+  // viewport clamping. The pinned UTF-8 encoder treats a surrogate code point
+  // as unreachable.
   const auto cells = std::max<uint32_t>(1, static_cast<uint32_t>(
       static_cast<float>(screen - before - after) / static_cast<float>(cell)));
   const auto index = static_cast<uint32_t>(
       std::max(0.0, static_cast<double>(position) - before) / cell);
   const auto codepoint = std::min(index, cells - 1) + 33;
-  if ((codepoint >= 0xd800 && codepoint <= 0xdfff) ||
-      (is_row && codepoint > 65535)) {
+  if (codepoint >= 0xd800 && codepoint <= 0xdfff) {
     throw Napi::RangeError::New(env, std::string(name) + " is unsafe for Ghostty's UTF-8 mouse encoding");
   }
 }
@@ -395,9 +394,9 @@ Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
     // these exceptional cells whenever 1005 is set, even if another format was
     // selected later. Ordinary geometry and SGR-only large grids are unchanged.
     ValidateUtf8MouseCoordinate(env, position.x, size.screen_width, size.cell_width,
-                                size.padding_left, size.padding_right, "mouse x", false);
+                                size.padding_left, size.padding_right, "mouse x");
     ValidateUtf8MouseCoordinate(env, position.y, size.screen_height, size.cell_height,
-                                size.padding_top, size.padding_bottom, "mouse y", true);
+                                size.padding_top, size.padding_bottom, "mouse y");
   }
 
   if (mouse_modes_dirty_) {
