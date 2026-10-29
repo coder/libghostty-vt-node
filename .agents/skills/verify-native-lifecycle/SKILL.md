@@ -25,19 +25,19 @@ This check found F1 in the code before `4aa7039`. The addon kept its class in on
 Run this skill when the diff since the sync commit changes any covered code:
 
 ```sh
-git diff --stat 4aa7039266d96613583fff03051f2eca8375b779 -- native/ test/workers.test.ts src/index.ts src/loader.ts package.json package-lock.json
+git diff --stat 0d255369dd8233e3ed1bce0575ab98b2bbd98d07 -- native/ test/workers.test.ts src/index.ts src/loader.ts package.json package-lock.json
 ```
 
 Also run it when a change adds a new place that stores a `Napi::Reference`, `Napi::FunctionReference`, or other static or global state in `native/`, or a new path that frees or uses `terminal_`. Static or global JS-facing state is the F1 bug class: keep it in the environment's instance data.
 
 ## Coverage record
 
-Sync commit: `4aa7039266d96613583fff03051f2eca8375b779`. At this commit the model describes the code below. Move the sync commit forward only after you confirm that the model still describes the covered code at the new commit.
+Sync commit: `0d255369dd8233e3ed1bce0575ab98b2bbd98d07`. At this commit the model describes the code below. Move the sync commit forward only after you confirm that the model still describes the covered code at the new commit.
 
 | Code | Model |
 |---|---|
 | `native/terminal.cc` `TerminalWrap::Init` and `TerminalWrap::Create` keep the class reference in `env.SetInstanceData` / `env.GetInstanceData` | `CtorStorage = "per_env"`, variable `slot` |
-| `native/addon.cc` `InitAll`, `NODE_API_MODULE`; `native/terminal.cc` `TerminalWrap::Init` (`delete env.GetInstanceData<...>()`, then `env.SetInstanceData`) | `LoadAddon(e)` |
+| `native/addon.cc` `InitAll`, `NODE_API_MODULE`; `native/terminal.cc` `TerminalWrap::Init` (asserts an empty instance-data slot, then `env.SetInstanceData`) | `LoadAddon(e)` |
 | `src/loader.ts` `loadNative` (caches the addon, so each env loads it once) | `LoadAddon` is enabled only while `env[e] = "idle"` |
 | `src/index.ts` `createTerminal`; `native/terminal.cc` `CreateTerminal`, `TerminalWrap::Create` (`constructor->New`), `TerminalWrap::TerminalWrap` (`ghostty_terminal_new`) | `CreateTerminal(e, t)` |
 | `src/index.ts` `feed`, `resize`, `snapshot`, `getVisibleText`, `formatPlain`, `formatHtml`, `#assertUsable`; `native/terminal.cc` the same methods and `RequireTerminal` | `Use(t)`, constants `TsDisposedGuard`, `NativeNullGuard` |
@@ -70,7 +70,9 @@ The mutant configs prove at each run that each rule can fail. Removing only one 
 
 ## Read the result
 
-Read every result with the `/statechart` skill. Copy `model/AddonEnvLifecycle.tla`, a config, and `model/statechart-view.mjs` to a scratch folder outside the repo, and give `/statechart` that config and the view. `model/chart.cfg` has small bounds (one worker, one terminal) so that the chart fits. For a broken rule, `/statechart` gives the shortest path in plain words. For a pass, it draws how the system moves between states. If the view no longer fits `/statechart`'s view interface, rewrite it from that skill's instructions.
+Read every result with the `/statechart` skill when your agent has it (it ships with the pstack plugin, not with this repo). Copy `model/AddonEnvLifecycle.tla`, a config, and `model/statechart-view.mjs` to a scratch folder outside the repo, and give `/statechart` that config and the view. `model/chart.cfg` has small bounds (one worker, one terminal) so that the chart fits. For a broken rule, `/statechart` gives the shortest path in plain words. For a pass, it draws how the system moves between states. If the view no longer fits `/statechart`'s view interface, rewrite it from that skill's instructions.
+
+Without `/statechart`, read the log that the row names. For a broken rule, TLC prints `Error: Invariant <rule> is violated` and then the shortest path as `State 1:`, `State 2:`, ... blocks. Each block names the action that made it (for example `<LoadAddon line 98 ...>`) and the value of every variable after that step. Tell the path as one sentence for each action, in the words of the coverage record.
 
 When a row says `DIFFERS`:
 
@@ -93,7 +95,7 @@ Change the model from the code, before you rerun. Do not shape it by what makes 
 - Bounds: the main thread and 2 workers, 2 terminals. `current.cfg` has 2,121 distinct states.
 - Each action is atomic. Different envs run on different threads. With one class reference for each env, two envs share no addon state, so treating each step as atomic hides no interleaving of addon state. With a shared slot (`mutant-process-static`), the threads also race on it: that adds bad behaviors, and the model already finds the slot bugs without it.
 - Assumption: when a Worker exits, Node runs the finalizers of its wrapped objects and invalidates the references that its env made. The model does not model the main thread's exit.
-- Assumption: each env loads the addon once. `TerminalWrap::Init` also handles a second load in one env (it deletes that env's old reference first), but the model does not explore it.
+- Assumption: each env loads the addon once. Node gives each load of the addon its own `napi_env`, even two `process.dlopen` calls in one thread, so `TerminalWrap::Init` asserts that the slot is empty. The model does not explore a second load.
 - Assumption: JS code cannot run inside a native method. This holds because `src/index.ts` passes plain option objects that it builds itself, so no getter runs in `OptionBool` or `options.Get`. A caller that reaches the native object directly is outside the model.
 
 ## Not covered
