@@ -46,7 +46,7 @@ $S/doctor.sh "$RUN_ROOT"
 It is read-only. Exit `0` means that the instance is worth driving. Each line starts with `ok`, `WARN`, or `FAIL`. It checks that:
 
 1. `instance.json` exists, `launch.sh` made it, and it names this checkout.
-2. The checkout has the same `HEAD` and the same tracked diff as at launch. Otherwise it prints `STALE`: run `cleanup.sh`, then `launch.sh`.
+2. The checkout has the same `HEAD` and the same tracked diff as at launch. Otherwise it prints `STALE`: run `cleanup.sh`, then `launch.sh` with a new `RUN_ROOT`.
 3. `node` on `PATH` is the version that launch used. It warns when that is not the `mise.toml` pin.
 4. The package is a real copy in the consumer's `node_modules`, not a symlink to the checkout.
 5. `node-gyp-build` picks the packed prebuild (`prebuilds/<platform>-<arch>/@coder+libghostty-vt-node.node`).
@@ -76,7 +76,7 @@ The map in [`features/README.md`](features/README.md) has a literal journey for 
 
 ## Evidence
 
-Each journey writes `RUN_ROOT/evidence/<name>/`: `journey.mjs`, `command.txt` (directory, node flags, time, node version), `stdout.txt`, `stderr.txt`, and `exit-code.txt`. `RUN_ROOT/evidence/instance.json` names the commit, the tracked-diff hash, and the tarball's sha256. `drive.sh` refuses to overwrite a journey's directory.
+Each journey writes `RUN_ROOT/evidence/<name>/`: `journey.mjs`, `command.txt` (directory, node flags, time, node version), `stdout.txt`, `stderr.txt`, and `exit-code.txt`. `RUN_ROOT/evidence/instance.json` names the commit, the tracked-diff hash, and the sha256 of the tarball, of the loaded addon, and of the libghostty-vt static library with the hash of its build inputs. One `RUN_ROOT` holds the evidence of one launch: `launch.sh` refuses a `RUN_ROOT` whose `evidence/` is not empty. `drive.sh` refuses to overwrite a journey's directory.
 
 Proof standards:
 

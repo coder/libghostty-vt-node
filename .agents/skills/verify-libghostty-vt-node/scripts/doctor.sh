@@ -30,7 +30,7 @@ diff_now="$(git -C "$ROOT" diff HEAD | { if command -v sha256sum >/dev/null; the
 if [[ "$(field commit)" == "$head_now" && "$(field trackedDiffSha256)" == "$diff_now" ]]; then
   ok "current: built from HEAD $head_now and the same uncommitted diff"
 else
-  bad "STALE: the checkout changed after launch (HEAD or tracked diff). Run cleanup.sh, then launch.sh"
+  bad "STALE: the checkout changed after launch (HEAD or tracked diff). Run cleanup.sh, then launch.sh with a new RUN_ROOT"
 fi
 
 [[ "$(field node)" == "$(node --version)" ]] && ok "node $(node --version) matches launch" \
@@ -49,16 +49,17 @@ case "$addon" in
 esac
 
 info="$(cd "$CONSUMER" && node --input-type=module -e '
+  const { fileURLToPath } = await import("node:url");
   const url = import.meta.resolve("@coder/libghostty-vt-node");
   const { getNativeInfo } = await import(url);
-  console.log(JSON.stringify({ url, ...getNativeInfo() }));
+  console.log(JSON.stringify({ path: fileURLToPath(url), ...getNativeInfo() }));
 ' 2>&1)"
 if [[ "$info" == "{"* ]]; then
   ok "getNativeInfo: $info"
-  url="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).url)' "$info")"
-  case "$url" in
-    "file://$CONSUMER/node_modules/"*) ok "the bare import resolves inside the consumer" ;;
-    *) bad "the bare import resolves outside the consumer: $url" ;;
+  resolved="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).path)' "$info")"
+  case "$resolved" in
+    "$CONSUMER/node_modules/"*) ok "the bare import resolves inside the consumer" ;;
+    *) bad "the bare import resolves outside the consumer: $resolved" ;;
   esac
   version="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).packageVersion)' "$info")"
   want="$(node -p 'require(process.argv[1]).version' "$ROOT/package.json")"

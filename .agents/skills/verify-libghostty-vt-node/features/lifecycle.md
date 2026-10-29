@@ -91,13 +91,15 @@ t.dispose();
 JS
 ```
 
-- **Worker threads.** The main thread creates a terminal, a Worker loads the package, and the main thread creates another terminal. Run `lifecycle-workers`. Exit `0`, and stdout ends with `main: created a terminal after the worker loaded`. A failure kills the process with a signal, so `drive.sh` exits `134` (SIGABRT, stderr has `Cannot create a handle without a HandleScope`) or `139` (SIGSEGV). That is a regression of finding F1 in the `verify-native-lifecycle` skill: report it, and do not change the journey to make it pass.
+- **Worker threads.** The main thread creates a terminal, a Worker loads the package, and the main thread creates another terminal. Run `lifecycle-workers`. Exit `0`, and stdout ends with `main: created a terminal after the worker loaded`. A failure kills the process with a signal, so `drive.sh` exits `134` (SIGABRT, stderr has `Cannot create a handle without a HandleScope`) or `139` (SIGSEGV). A hang exits `1` after 20 seconds with `timeout:` on stderr. That is a regression of finding F1 in the `verify-native-lifecycle` skill: report it, and do not change the journey to make it pass.
 
 ```sh
 $S/drive.sh "$RUN_ROOT" lifecycle-workers <<'JS'
 import { Worker } from "node:worker_threads";
 import { once } from "node:events";
 import { createTerminal } from "@coder/libghostty-vt-node";
+// A hang is a failure too: end the journey with evidence instead of waiting forever.
+setTimeout(() => { console.error("timeout: the worker journey did not finish in 20 s"); process.exit(1); }, 20_000).unref();
 createTerminal({ cols: 10, rows: 2 }).dispose();
 console.log("main: created a terminal");
 const w = new Worker(`import("@coder/libghostty-vt-node").then((m) => {

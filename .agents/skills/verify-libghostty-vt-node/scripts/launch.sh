@@ -29,8 +29,10 @@ fi
 # scripts. Refuse a RUN_ROOT that another account can change or move: a
 # symlink, a directory owned by someone else or writable by group or others,
 # or one below any directory that another account owns (root excepted) or
-# that group or others can write without the sticky bit.
-node -e '
+# that group or others can write without the sticky bit. Check the ancestors
+# of the path as given and of its physical path, and use the physical path
+# that this check returns: never resolve RUN_ROOT again after it.
+RUN_ROOT="$(node -e '
   const fs = require("node:fs"), path = require("node:path");
   const dir = process.argv[1], uid = process.getuid();
   const fail = (why) => { console.error(`error: RUN_ROOT ${dir} ${why}`); process.exit(2); };
@@ -39,20 +41,28 @@ node -e '
   if (!st.isDirectory()) fail("is not a directory");
   if (st.uid !== uid) fail("is not owned by you");
   if (st.mode & 0o022) fail("is writable by group or others: chmod 700 it, or use a new path");
-  for (let up = path.dirname(fs.realpathSync(dir)); ; up = path.dirname(up)) {
-    const a = fs.statSync(up);
-    if (a.uid !== uid && a.uid !== 0) fail(`is below ${up}, which another account owns`);
-    if ((a.mode & 0o022) && !(a.mode & 0o1000)) fail(`is below ${up}, which group or others can write`);
-    if (up === path.dirname(up)) break;
+  const real = fs.realpathSync(dir);
+  for (const start of [path.resolve(dir), real]) {
+    for (let up = path.dirname(start); ; up = path.dirname(up)) {
+      const a = fs.statSync(up);
+      if (a.uid !== uid && a.uid !== 0) fail(`is below ${up}, which another account owns`);
+      if ((a.mode & 0o022) && !(a.mode & 0o1000)) fail(`is below ${up}, which group or others can write`);
+      if (up === path.dirname(up)) break;
+    }
   }
-' "$RUN_ROOT"
-RUN_ROOT="$(cd "$RUN_ROOT" && pwd -P)"
+  process.stdout.write(real);
+' "$RUN_ROOT")"
 outside_checkout "$RUN_ROOT"
 INSTANCE="$RUN_ROOT/instance"
 EVIDENCE="$RUN_ROOT/evidence"
 
 if [[ -e "$INSTANCE" ]]; then
-  echo "error: $INSTANCE exists. Run cleanup.sh $RUN_ROOT first, or use a new RUN_ROOT." >&2
+  echo "error: $INSTANCE exists. Run cleanup.sh $RUN_ROOT first, then use a new RUN_ROOT." >&2
+  exit 2
+fi
+# Evidence belongs to the launch that made it: never mix two launches in one RUN_ROOT.
+if [[ -d "$EVIDENCE" && -n "$(ls -A "$EVIDENCE")" ]]; then
+  echo "error: $EVIDENCE holds evidence from an earlier launch. Use a new RUN_ROOT." >&2
   exit 2
 fi
 
@@ -110,10 +120,14 @@ JSON
 (cd "$INSTANCE/consumer" && run npm install --no-audit --no-fund "$INSTANCE/$tarball")
 
 if [[ "$(checkout_state)" != "$state_before" ]]; then
-  echo "error: the checkout changed during the launch (HEAD or tracked diff). Run cleanup.sh, then launch again." >&2
+  echo "error: the checkout changed during the launch (HEAD or tracked diff). Run cleanup.sh, then launch again with a new RUN_ROOT." >&2
   exit 1
 fi
+static_lib="${LIBGHOSTTY_VT_STATIC_LIB:-$lib_dir/lib/libghostty-vt.a}"
+addon="$(cd "$INSTANCE/consumer" && node -e 'process.stdout.write(require("node-gyp-build").path(process.argv[1]))' "$INSTANCE/consumer/node_modules/@coder/libghostty-vt-node")"
 INSTANCE="$INSTANCE" TARBALL="$tarball" TARBALL_SHA="$(sha "$INSTANCE/$tarball")" \
+LIB_INPUTS="$lib_inputs" STATIC_LIB="$static_lib" STATIC_LIB_SHA="$(sha "$static_lib")" \
+ADDON="${addon#"$INSTANCE/consumer/"}" ADDON_SHA="$(sha "$addon")" \
 COMMIT="${state_before% *}" DIFF_SHA="${state_before#* }" CHECKOUT="$ROOT" \
 node -e '
   const fs = require("node:fs");
@@ -122,6 +136,8 @@ node -e '
     marker: "verify-libghostty-vt-node",
     checkout: e.CHECKOUT, commit: e.COMMIT, trackedDiffSha256: e.DIFF_SHA,
     tarball: e.TARBALL, tarballSha256: e.TARBALL_SHA,
+    addon: e.ADDON, addonSha256: e.ADDON_SHA,
+    libghosttyVt: { staticLib: e.STATIC_LIB, staticLibSha256: e.STATIC_LIB_SHA, buildInputsSha256: e.LIB_INPUTS },
     node: process.version, platform: process.platform, arch: process.arch,
     createdAt: new Date().toISOString(),
   };
