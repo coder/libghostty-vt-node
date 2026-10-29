@@ -236,7 +236,7 @@ The package has four layers:
 ## Global Side Effects
 
 - Network and disk: every `npm run build:libghostty` fetches the pinned Ghostty commit, by default into `vendor/ghostty`, and installs `libghostty-vt` and `ghostty-source.json`, by default into `vendor/libghostty-vt`. `GHOSTTY_SOURCE_DIR` and `LIBGHOSTTY_VT_PREFIX` change these paths [scripts/build-libghostty-vt.sh:GHOSTTY_REPO].
-- Disk: `npm run build:native` runs `node-gyp rebuild` [package.json:scripts.build:native], and `npm run build` writes `dist/` [tsconfig.json:outDir]. `npm run build:prebuild` runs `prebuildify --napi` [package.json:scripts.build:prebuild]. `npm run assemble:prebuilds` deletes and rebuilds `prebuilds/` [scripts/assemble-prebuilds.mjs:targetRoot].
+- Disk: `npm run build:native` runs `node-gyp rebuild` [package.json:scripts.build:native], and `npm run build` writes `dist/` [tsconfig.json:outDir]. `npm run build:prebuild` runs `prebuildify --napi` [package.json:scripts.build:prebuild]. `npm run assemble:prebuilds` replaces `prebuilds/` after its checks pass [scripts/assemble-prebuilds.mjs:targetRoot].
 - Remote state: the release tag script pushes `v<version>` to `origin` [scripts/create-release-tag.mjs:git]. The mise task `publish` runs `npm publish --access public --tag "$(node scripts/resolve-npm-publish-tag.mjs)"` [mise.toml:tasks.publish]. `.github/workflows/publish.yml` also creates or updates a GitHub Release, and `.github/workflows/release-changelog.yml` commits a `CHANGELOG.md` entry to the release PR branch, pushes it, and starts `ci.yml`.
 - Runtime memory: each `createTerminal` call allocates a native terminal and a mouse encoder. `dispose()` or garbage collection frees both [native/terminal.cc:TerminalWrap::~TerminalWrap].
 
@@ -244,5 +244,6 @@ The package has four layers:
 
 - Run: `mise run ci`
 - `.github/workflows/ci.yml` runs the same task. Without mise, run the steps in "Native Build" above.
+- UBSan build of the addon: `mise run ci-ubsan`. CI runs it as the `linux-x64-ubsan` row.
 - Packaged-install journeys: [`.agents/skills/verify-libghostty-vt-node/SKILL.md`](https://github.com/coder/libghostty-vt-node/blob/main/.agents/skills/verify-libghostty-vt-node/SKILL.md)
 - TLA+ model of the native lifecycle: [`.agents/skills/verify-native-lifecycle/SKILL.md`](https://github.com/coder/libghostty-vt-node/blob/main/.agents/skills/verify-native-lifecycle/SKILL.md)
