@@ -14,6 +14,17 @@ run = [
   "npm run smoke",
 ]
 
+[tasks.ci-ubsan]
+description = "Build the native addon with UBSan, then run tests and smoke so undefined behavior aborts the run."
+run = [
+  "npm ci",
+  "npm run build:libghostty",
+  # GCC's "undefined" group leaves out float-cast-overflow.
+  "CXXFLAGS=\"-fsanitize=undefined,float-cast-overflow -fno-sanitize-recover=all\" LDFLAGS=\"-fsanitize=undefined,float-cast-overflow\" npm run build:native",
+  "npm test",
+  "npm run smoke",
+]
+
 [tasks.release-prebuilds]
 description = "Build and verify npm-bundled Node-API prebuild artifacts."
 run = [

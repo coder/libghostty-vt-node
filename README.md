@@ -184,5 +184,6 @@ The package has four layers:
 
 - Run: `mise run ci`
 - `.github/workflows/ci.yml` runs the same task. Without mise, run the steps in "Native Build" above.
+- UBSan build of the addon: `mise run ci-ubsan`. CI runs it as the `linux-x64-ubsan` row.
 - Packaged-install journeys: [`.agents/skills/verify-libghostty-vt-node/SKILL.md`](https://github.com/coder/libghostty-vt-node/blob/main/.agents/skills/verify-libghostty-vt-node/SKILL.md)
 - TLA+ model of the native lifecycle: [`.agents/skills/verify-native-lifecycle/SKILL.md`](https://github.com/coder/libghostty-vt-node/blob/main/.agents/skills/verify-native-lifecycle/SKILL.md)

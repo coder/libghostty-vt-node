@@ -67,5 +67,6 @@ C++ declarations:
 
 - Run (after `npm ci`): `npm run build:libghostty && npm run build:native && npm test`
 - Every native test skips when the addon does not load (`test/native-support.ts:nativeSupport`), so check the test output for skips.
+- `mise run ci-ubsan` builds the addon with UBSan (Linux, GCC), then runs the tests and smoke. Undefined behavior aborts the run (`mise.toml:tasks.ci-ubsan`).
 - `test/workers.test.ts` checks the per-environment state in child processes with `worker_threads`. `test/terminal.test.ts` covers `feed`, `snapshot`, `resize`, `dispose`, and the `RangeError` cases of the `createTerminal` checks in the addon. No vitest test covers `formatPlain`, `formatHtml`, `includeScrollback`, the cell style fields, or the typed-array errors.
 - For changes to `TerminalWrap` or `InitAll`, also run the TLA+ lifecycle model: [`.agents/skills/verify-native-lifecycle/SKILL.md`](https://github.com/coder/libghostty-vt-node/blob/main/.agents/skills/verify-native-lifecycle/SKILL.md).
