@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
 import { createTerminal } from "../src/index.js";
 import { loadNative } from "../src/loader.js";
+import { nativeSupport } from "./native-support.js";
+
+const support = nativeSupport();
+const describeIfNative = support.available ? describe : describe.skip;
 
 const geometry = {
   screenWidth: 80, screenHeight: 24, cellWidth: 1, cellHeight: 1,
@@ -12,7 +16,7 @@ const geometry = {
 const childArgs = ["--import", "tsx", "--input-type=module", "-e"];
 
 // Exercise the C++ boundary independently of the public TypeScript normalizer.
-describe.each([
+describeIfNative.each([
   ["public", createTerminal],
   ["native", (options: { cols: number; rows: number }) => loadNative().createTerminal(options)],
 ] as const)("%s mouse safety", (_name, create) => {
