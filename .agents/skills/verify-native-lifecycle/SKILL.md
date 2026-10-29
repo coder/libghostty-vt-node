@@ -5,7 +5,7 @@ description: "Model-check, with TLA+, how the libghostty-vt-node native addon ke
 
 # Verify the native addon lifecycle
 
-This skill checks a TLA+ model of the addon's native state against four rules. A model checker (TLC) tries every order of steps in the model, within the bounds below. Tests only try the orders that someone wrote.
+This skill checks a TLA+ model of the addon's native state against five rules. A model checker (TLC) tries every order of steps in the model, within the bounds below. Tests only try the orders that someone wrote.
 
 ## The rules
 
@@ -14,34 +14,42 @@ This skill checks a TLA+ model of the addon's native state against four rules. A
 | `CreateUsesOwnClass` | `createTerminal` in a thread uses the class reference that this thread made. | The process aborts or segfaults when it creates a terminal. |
 | `LoadDeletesOnlyOwnRef` | Loading the addon in a thread never deletes another thread's reference. | One thread frees V8 state that belongs to another thread (a data race). |
 | `HandleFreedOnce` | libghostty frees each terminal handle at most once. | A double free corrupts the heap. |
-| `NoCallOnDeadHandle` | No libghostty call reaches a freed or null terminal handle. | Use after free: a crash or wrong terminal output. |
+| `EncoderFreedOnce` | libghostty frees each mouse encoder handle at most once. | A double free corrupts the heap. |
+| `NoCallOnDeadHandle` | No libghostty call reaches a freed or null terminal or mouse encoder handle. | Use after free: a crash, wrong terminal output, or mouse bytes from another terminal. |
 
 ## History: finding F1, fixed
 
 This check found F1 in the code before `4aa7039`. The addon kept its class in one `static Napi::FunctionReference constructor` for the whole process, and each environment's `TerminalWrap::Init` overwrote it. After the main thread and a Worker both loaded the addon, the main thread's `createTerminal` used the worker's reference: V8 aborted with `Cannot create a handle without a HandleScope`, or the process segfaulted after the worker exited. The fix keeps one reference for each environment in its instance data. `model/mutant-process-static.cfg` is the old code, and `run.sh` checks at each run that it still breaks `CreateUsesOwnClass` and `LoadDeletesOnlyOwnRef`.
+
+## History: finding F2, fixed
+
+This check found F2 in `encodeMouse` while #12 was in review, so the bug never reached main. #12 landed with the fix as `7366b75`. `TerminalWrap::EncodeMouse` copied `terminal_` and `mouse_encoder_` into locals, and then read its arguments with `Get()`. `Get()` runs getters, including a getter on `Object.prototype` for a key that `src/index.ts` leaves out of the object it passes (`button`, `modifiers`). A getter that called `dispose()` made the libghostty calls use freed handles. Through the package API, the call then encoded with another terminal's encoder state. Through the raw native object, the process crashed. The fix reads every argument first, then takes the handles, and runs no JS until the call returns. `model/mutant-handles-before-reads.cfg` is the old code, and `run.sh` checks at each run that it still breaks `NoCallOnDeadHandle`. `test/mouse-safety.test.ts` replays the getter cases in child processes.
 
 ## Does my change touch the verified code?
 
 Run this skill when the diff since the sync commit changes any covered code:
 
 ```sh
-git diff --stat 0d255369dd8233e3ed1bce0575ab98b2bbd98d07 -- native/ test/workers.test.ts src/index.ts src/loader.ts package.json package-lock.json
+git diff --stat 7366b7545170ad77f5151e445c60bbf5bb110d87 -- native/ test/workers.test.ts test/mouse-safety.test.ts src/index.ts src/loader.ts package.json package-lock.json
 ```
 
-Also run it when a change adds a new place that stores a `Napi::Reference`, `Napi::FunctionReference`, or other static or global state in `native/`, or a new path that frees or uses `terminal_`. Static or global JS-facing state is the F1 bug class: keep it in the environment's instance data.
+Also run it when a change adds a new place that stores a `Napi::Reference`, `Napi::FunctionReference`, or other static or global state in `native/`, or a new path that frees or uses `terminal_` or `mouse_encoder_`. Static or global JS-facing state is the F1 bug class: keep it in the environment's instance data. A native method that copies a handle and then calls `Get()` is the F2 bug class: read every argument before you take the handles.
 
 ## Coverage record
 
-Sync commit: `0d255369dd8233e3ed1bce0575ab98b2bbd98d07`. At this commit the model describes the code below. Move the sync commit forward only after you confirm that the model still describes the covered code at the new commit.
+Sync commit: `7366b7545170ad77f5151e445c60bbf5bb110d87`. At this commit the model describes the code below. Move the sync commit forward only after you confirm that the model still describes the covered code at the new commit.
 
 | Code | Model |
 |---|---|
 | `native/terminal.cc` `TerminalWrap::Init` and `TerminalWrap::Create` keep the class reference in `env.SetInstanceData` / `env.GetInstanceData` | `CtorStorage = "per_env"`, variable `slot` |
 | `native/addon.cc` `InitAll`, `NODE_API_MODULE`; `native/terminal.cc` `TerminalWrap::Init` (asserts an empty instance-data slot, then `env.SetInstanceData`) | `LoadAddon(e)` |
 | `src/loader.ts` `loadNative` (caches the addon, so each env loads it once) | `LoadAddon` is enabled only while `env[e] = "idle"` |
-| `src/index.ts` `createTerminal`; `native/terminal.cc` `CreateTerminal`, `TerminalWrap::Create` (`constructor->New`), `TerminalWrap::TerminalWrap` (`ghostty_terminal_new`) | `CreateTerminal(e, t)` |
+| `src/index.ts` `createTerminal`; `native/terminal.cc` `CreateTerminal`, `TerminalWrap::Create` (`constructor->New`), `TerminalWrap::TerminalWrap` (`ghostty_terminal_new`, then `ghostty_mouse_encoder_new`) | `CreateTerminal(e, t)` |
+| `native/terminal.cc` `TerminalWrap::TerminalWrap` when `ghostty_mouse_encoder_new` fails: it frees the terminal, sets `terminal_ = nullptr`, and throws, so `~TerminalWrap` does not run | `CreateFails(e, t)` |
 | `src/index.ts` `feed`, `resize`, `snapshot`, `getVisibleText`, `formatPlain`, `formatHtml`, `#assertUsable`; `native/terminal.cc` the same methods and `RequireTerminal` | `Use(t)`, constants `TsDisposedGuard`, `NativeNullGuard` |
-| `src/index.ts` `dispose`; `native/terminal.cc` `TerminalWrap::Dispose`, `DisposeNative` | `Dispose(t)`, `DisposeNative(r)`, constant `DisposeClearsPtr` |
+| `src/index.ts` `encodeMouse` (`#assertUsable`, then `normalizeMouseOptions` and `normalizeMouseEvent` read the caller's objects) | `EncodeTs(t)` |
+| `native/terminal.cc` `TerminalWrap::EncodeMouse`: `Get()` reads of geometry, `x`, `y`, `action`, `button`, `modifiers`, `anyButtonPressed`, `trackLastCell`; then `RequireTerminal`, `RequireMouseEncoder`, `ghostty_terminal_mode_get`, `ghostty_mouse_encoder_*` | `EncodeEnter(t)` (enter, reads), `EncodeCall(t)` (handles and libghostty calls), `EncodeThrows(t)`, constants `JsInNativeRead`, `TakeHandlesLast`, `NativeNullGuard` |
+| `src/index.ts` `dispose`; `native/terminal.cc` `TerminalWrap::Dispose`, `DisposeNative` (frees `mouse_encoder_`, then `terminal_`, and sets each to `nullptr`) | `Dispose(t)`, `DisposeNative(r)`, constants `DisposeClearsPtr`, `EncoderClearsPtr` |
 | `native/terminal.cc` `TerminalWrap::~TerminalWrap` (ObjectWrap finalizer) | `Drop(t)`, `Finalize(t)` |
 | Node environment teardown when a Worker exits | `WorkerExit(w)` |
 | node-addon-api 8.9.2 `FunctionReference::New` (uses the env stored in the reference) and `Reference::~Reference` / `operator=` (run `napi_delete_reference` with the stored env) | `CreateTerminal` sets `refUse` with the slot's owner; `LoadAddon` sets `refUse` with the old owner |
@@ -62,9 +70,12 @@ It takes about 20 seconds. It runs TLC once for each config and rule, and prints
 | `model/current.cfg` | The current code. Main thread, 2 workers, 2 terminals. | none |
 | `model/mutant-process-static.cfg` | The old code: one class reference for the whole process (F1). | `CreateUsesOwnClass`, `LoadDeletesOnlyOwnRef` |
 | `model/mutant-dispose-keeps-pointer.cfg` | Current code, but `DisposeNative` does not set `terminal_ = nullptr`. | `HandleFreedOnce` |
-| `model/mutant-no-use-guards.cfg` | Current code, but no `#assertUsable` and no `RequireTerminal` null check. | `NoCallOnDeadHandle` |
+| `model/mutant-no-use-guards.cfg` | Current code, but no `#assertUsable` and no native null checks. | `NoCallOnDeadHandle` |
+| `model/mutant-no-native-guard.cfg` | Current code, but no `RequireTerminal` or `RequireMouseEncoder` null check. `#assertUsable` stays. | `NoCallOnDeadHandle` |
+| `model/mutant-keeps-encoder-pointer.cfg` | Current code, but `DisposeNative` does not set `mouse_encoder_ = nullptr`. | `EncoderFreedOnce` |
+| `model/mutant-handles-before-reads.cfg` | The old code: `EncodeMouse` copies the handles, then reads its arguments (F2). | `NoCallOnDeadHandle` |
 
-The mutant configs prove at each run that each rule can fail. Removing only one of the two use guards breaks nothing, because the other guard still stops the call.
+The mutant configs prove at each run that each rule can fail. Removing only `#assertUsable` breaks nothing, because the native null checks still stop the call. Removing only the native null checks breaks `NoCallOnDeadHandle`: a getter that the `encodeMouse` normalizers or the native `Get()` reads run can dispose the terminal after `#assertUsable` passed.
 
 `test/workers.test.ts` replays the worker counterexamples against the real addon, in child processes: a live worker, a worker that exited, and two workers. `npm test` runs it. It crashed in all three scenarios before the F1 fix.
 
@@ -92,15 +103,17 @@ Change the model from the code, before you rerun. Do not shape it by what makes 
 
 ## Bounds and assumptions
 
-- Bounds: the main thread and 2 workers, 2 terminals. `current.cfg` has 2,121 distinct states.
+- Bounds: the main thread and 2 workers, 2 terminals. `current.cfg` has 8,661 distinct states.
 - Each action is atomic. Different envs run on different threads. With one class reference for each env, two envs share no addon state, so treating each step as atomic hides no interleaving of addon state. With a shared slot (`mutant-process-static`), the threads also race on it: that adds bad behaviors, and the model already finds the slot bugs without it.
 - Assumption: when a Worker exits, Node runs the finalizers of its wrapped objects and invalidates the references that its env made. The model does not model the main thread's exit.
 - Assumption: each env loads the addon once. Node gives each load of the addon its own `napi_env`, even two `process.dlopen` calls in one thread, so `TerminalWrap::Init` asserts that the slot is empty. The model does not explore a second load.
-- Assumption: JS code cannot run inside a native method. This holds because `src/index.ts` passes plain option objects that it builds itself, so no getter runs in `OptionBool` or `options.Get`. A caller that reaches the native object directly is outside the model.
+- JS can run where code reads a caller's values. The model has these points: the `encodeMouse` normalizers after `#assertUsable` (`EncodeTs`), and the native `Get()` reads in `EncodeMouse` (`EncodeEnter` to `EncodeCall`, while `JsInNativeRead`). A getter there can run any step of the model, for example `Dispose` of the same terminal. `snapshot` has the same window as `EncodeTs`: `normalizeSnapshotOptions` reads the caller's getters after `#assertUsable`, and the native null check covers it. The model keeps `snapshot` in the one-step `Use`.
+- Assumption: no JS runs inside the other native methods after they take `terminal_`. `src/index.ts` passes them objects that it builds itself, with every key that they read set as an own property, so no getter runs in `OptionBool` or `options.Get`. The constructor reads `scrollbackLimit` with `Get()` before `ghostty_terminal_new`, so a getter there cannot reach a handle.
+- Assumption: while a call runs on a terminal, the program cannot drop that terminal, and its Worker cannot exit: the call keeps the object reachable, and a terminating Worker first unwinds its stack (`EncodeThrows`).
 
 ## Not covered
 
 - libghostty itself: VT parsing and every `ghostty_*` call are trusted.
 - The content of snapshots and visible text (`ReadLine`, `ReadCellText`, `BuildCellObject`, `ResolveStyleColor`).
-- Argument validation, `getNativeInfo`, prebuild loading, and packaging.
+- Argument validation (the mouse geometry and coordinate checks included), the encoded mouse bytes, the mouse mode cache (`mouse_modes_dirty_`), `getNativeInfo`, prebuild loading, and packaging.
 - More than one load of the addon in one env, for example two copies of the package at different paths.

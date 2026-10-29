@@ -7,12 +7,15 @@ const slots = (s) => (typeof s === "string" ? { "Class reference": owner(s) } : 
   "Main's class reference": owner(s.main),
   "Worker's class reference": owner(s.w1),
 });
+const handleState = (state, frees) => (frees > 1 ? "freed twice" : state === "freed" ? "freed" : "open");
 const terminal = (t) => {
   if (t.js === "none") return "none";
   const where = t.in === "main" ? "main" : "worker";
-  const handle = t.frees > 1 ? "freed twice" : t.handle === "freed" ? "freed" : "open";
+  if (t.js === "failed") return `${where}: createTerminal threw, handle ${handleState(t.handle, t.frees)}`;
   const js = { live: "in use", disposed: "disposed", dropped: "unreachable", finalized: "collected" }[t.js];
-  return `${where}: ${js}, handle ${handle}`;
+  const call = { idle: "", ts: ", encodeMouse checking arguments", native: ", encodeMouse reading arguments" }[t.call];
+  return `${where}: ${js}, handle ${handleState(t.handle, t.frees)}, ` +
+    `mouse encoder ${handleState(t.enc, t.encFrees)}${call}`;
 };
 
 export const title = "libghostty-vt-node: the main thread and a worker, each with its own class reference";
@@ -36,6 +39,16 @@ export const step = (action, from, to) => {
       return `${who(from, to)} imports the package`;
     case "CreateTerminal":
       return `${creator(to)} calls createTerminal`;
+    case "CreateFails":
+      return `${creator(to)} calls createTerminal, and the mouse encoder allocation fails`;
+    case "EncodeTs":
+      return to.term.t1.call === "ts" ? "the program calls encodeMouse" : null;
+    case "EncodeEnter":
+      return to.handleUse.op === "none" ? "encodeMouse enters the addon" : "encodeMouse writes mouse bytes";
+    case "EncodeCall":
+      return to.handleUse.op === "none" ? null : "encodeMouse writes mouse bytes";
+    case "EncodeThrows":
+      return "a getter in the encodeMouse arguments throws";
     case "Use":
       return to.handleUse.op === "none" ? null : "the program feeds or reads the terminal";
     case "Dispose":

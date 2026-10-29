@@ -17,7 +17,7 @@ TLA_VERSION=1.7.4
 TLA_SHA256=936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88
 JAVA="${JAVA:-java}"
 
-RULES=(CreateUsesOwnClass LoadDeletesOnlyOwnRef HandleFreedOnce NoCallOnDeadHandle)
+RULES=(CreateUsesOwnClass LoadDeletesOnlyOwnRef HandleFreedOnce EncoderFreedOnce NoCallOnDeadHandle)
 
 # EXPECT: the rules that each config must break. Every other rule must hold.
 # Each mutant is the current code with one break, and must break its rule.
@@ -28,10 +28,14 @@ expect_breaks() {
     mutant-process-static) echo "CreateUsesOwnClass LoadDeletesOnlyOwnRef" ;;
     mutant-dispose-keeps-pointer) echo "HandleFreedOnce" ;;
     mutant-no-use-guards) echo "NoCallOnDeadHandle" ;;
+    mutant-no-native-guard) echo "NoCallOnDeadHandle" ;;
+    mutant-keeps-encoder-pointer) echo "EncoderFreedOnce" ;;
+    mutant-handles-before-reads) echo "NoCallOnDeadHandle" ;;
     *) echo "error: no EXPECT entry for config $1" >&2; exit 2 ;;
   esac
 }
-CONFIGS=(current mutant-process-static mutant-dispose-keeps-pointer mutant-no-use-guards)
+CONFIGS=(current mutant-process-static mutant-dispose-keeps-pointer mutant-no-use-guards
+         mutant-no-native-guard mutant-keeps-encoder-pointer mutant-handles-before-reads)
 for cfg in "${CONFIGS[@]}"; do expect_breaks "$cfg" >/dev/null; done
 
 command -v "$JAVA" >/dev/null || { echo "error: java not found; set JAVA or install Java 11+" >&2; exit 2; }
