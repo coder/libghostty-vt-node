@@ -5,7 +5,7 @@ A user creates terminals, disposes them, and lets the garbage collector free the
 ## Sub-features
 
 - `lifecycle-dispose` makes `dispose()` idempotent, and every method throws after it.
-- `lifecycle-gc` frees dropped terminals, disposed or not, without a crash.
+- `lifecycle-gc` lets V8 collect dropped terminals, disposed or not, without a crash.
 - `lifecycle-invalid` rejects bad `createTerminal` options and bad `feed` data.
 - `lifecycle-workers` creates terminals in the main thread after a Worker loaded the package.
 
@@ -40,7 +40,7 @@ for (const [name, call] of Object.entries(calls)) {
 JS
 ```
 
-- **Garbage collection.** Create 200 terminals in a function, dispose every other one, return, and force GC. Run `lifecycle-gc` with `--expose-gc`. Exit `0`, and stdout is `collected 100 disposed and 100 open terminals`. Each count proves that the `TerminalWrap` finalizer ran on that kind of terminal without a crash.
+- **Garbage collection.** Create 200 terminals in a function, dispose every other one, return, and force GC. Run `lifecycle-gc` with `--expose-gc`. Exit `0`, and stdout is `collected 100 disposed and 100 open terminals`. Each count proves that V8 collected the JS `Terminal` objects of that kind and that the process survived. JS cannot see the native `TerminalWrap` finalizer or the freed handle, so this journey does not prove that the handles were freed. The `verify-native-lifecycle` skill covers that.
 
 ```sh
 $S/drive.sh "$RUN_ROOT" lifecycle-gc --expose-gc <<'JS'
