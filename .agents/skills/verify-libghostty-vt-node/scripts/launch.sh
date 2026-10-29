@@ -26,9 +26,10 @@ elif [[ ! -e "$RUN_ROOT" && ! -L "$RUN_ROOT" ]]; then
   mkdir -m 700 -- "$RUN_ROOT"
 fi
 # The build installs the tarball from RUN_ROOT with npm, which runs package
-# scripts. Refuse a RUN_ROOT that another account can change: a symlink, a
-# directory owned by someone else or writable by group or others, or one in
-# a parent that others can write without the sticky bit.
+# scripts. Refuse a RUN_ROOT that another account can change or move: a
+# symlink, a directory owned by someone else or writable by group or others,
+# or one below any directory that another account owns (root excepted) or
+# that group or others can write without the sticky bit.
 node -e '
   const fs = require("node:fs"), path = require("node:path");
   const dir = process.argv[1], uid = process.getuid();
@@ -38,10 +39,12 @@ node -e '
   if (!st.isDirectory()) fail("is not a directory");
   if (st.uid !== uid) fail("is not owned by you");
   if (st.mode & 0o022) fail("is writable by group or others: chmod 700 it, or use a new path");
-  const parent = fs.statSync(path.dirname(path.resolve(dir)));
-  const sticky = (parent.mode & 0o1000) !== 0;
-  if (!sticky && (parent.mode & 0o002)) fail("is in a parent that everyone can write");
-  if (!sticky && (parent.mode & 0o020) && parent.uid !== uid) fail("is in a parent that another account can write");
+  for (let up = path.dirname(fs.realpathSync(dir)); ; up = path.dirname(up)) {
+    const a = fs.statSync(up);
+    if (a.uid !== uid && a.uid !== 0) fail(`is below ${up}, which another account owns`);
+    if ((a.mode & 0o022) && !(a.mode & 0o1000)) fail(`is below ${up}, which group or others can write`);
+    if (up === path.dirname(up)) break;
+  }
 ' "$RUN_ROOT"
 RUN_ROOT="$(cd "$RUN_ROOT" && pwd -P)"
 outside_checkout "$RUN_ROOT"
