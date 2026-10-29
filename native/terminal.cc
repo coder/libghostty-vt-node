@@ -280,7 +280,6 @@ GhosttyMouseEncoder TerminalWrap::RequireMouseEncoder(Napi::Env env) {
 Napi::Value TerminalWrap::Feed(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   GhosttyTerminal terminal = RequireTerminal(env);
-  if (env.IsExceptionPending()) return env.Undefined();
 
   const uint8_t* data = nullptr;
   size_t len = 0;
@@ -320,7 +319,6 @@ Napi::Value TerminalWrap::Feed(const Napi::CallbackInfo& info) {
 Napi::Value TerminalWrap::Resize(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   GhosttyTerminal terminal = RequireTerminal(env);
-  if (env.IsExceptionPending()) return env.Undefined();
   if (info.Length() != 2) {
     throw Napi::TypeError::New(env, "resize expects cols and rows");
   }
@@ -462,7 +460,6 @@ Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
 Napi::Value TerminalWrap::Snapshot(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   RequireTerminal(env);
-  if (env.IsExceptionPending()) return env.Undefined();
 
   bool include_scrollback = false;
   bool include_cells = false;
@@ -485,7 +482,6 @@ Napi::Value TerminalWrap::Snapshot(const Napi::CallbackInfo& info) {
 Napi::Value TerminalWrap::GetVisibleText(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   RequireTerminal(env);
-  if (env.IsExceptionPending()) return env.Undefined();
 
   try {
     uint16_t rows = 0;
@@ -508,7 +504,6 @@ Napi::Value TerminalWrap::GetVisibleText(const Napi::CallbackInfo& info) {
 Napi::Value TerminalWrap::FormatPlain(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   RequireTerminal(env);
-  if (env.IsExceptionPending()) return env.Undefined();
   try {
     return Napi::String::New(env, Format(GHOSTTY_FORMATTER_FORMAT_PLAIN, true));
   } catch (const std::exception& err) {
@@ -519,7 +514,6 @@ Napi::Value TerminalWrap::FormatPlain(const Napi::CallbackInfo& info) {
 Napi::Value TerminalWrap::FormatHtml(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   RequireTerminal(env);
-  if (env.IsExceptionPending()) return env.Undefined();
   try {
     return Napi::String::New(env, Format(GHOSTTY_FORMATTER_FORMAT_HTML, true));
   } catch (const std::exception& err) {
