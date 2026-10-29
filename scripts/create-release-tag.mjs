@@ -10,25 +10,18 @@ const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
 const version = packageJson.version;
 const releaseBranchName = process.env.RELEASE_BRANCH_NAME;
 const releaseTargetSha = process.env.RELEASE_TARGET_SHA;
+// SemVer 2.0.0 (semver.org): no leading zeros in numeric identifiers, no empty identifiers.
 const semverPattern =
-  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z.-]+)?$/;
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?$/;
 
-function git(args, options = {}) {
+function git(args) {
   assert.ok(Array.isArray(args), "git args must be an array");
   assert.ok(args.every((arg) => typeof arg === "string"), "git args must be strings");
   return execFileSync("git", args, {
     cwd: root,
     encoding: "utf8",
-    stdio: ["ignore", "pipe", options.allowFailure ? "pipe" : "inherit"],
+    stdio: ["ignore", "pipe", "inherit"],
   }).trim();
-}
-
-function tryGit(args) {
-  try {
-    return git(args, { allowFailure: true });
-  } catch {
-    return undefined;
-  }
 }
 
 assert.equal(typeof version, "string", "package.json version must be a string");
@@ -50,7 +43,9 @@ assert.match(targetSha, /^[0-9a-f]{40}$/i, `release target SHA must be a full co
 const currentHead = git(["rev-parse", "HEAD"]);
 assert.equal(currentHead, targetSha, "checked-out HEAD must match the release target SHA");
 
-const remoteTagSha = tryGit(["ls-remote", "--tags", "origin", `refs/tags/${tagName}`]);
+// Empty output means the tag is absent. A failed ls-remote (network, auth) throws and stops
+// the release before it tags, instead of counting as "absent".
+const remoteTagSha = git(["ls-remote", "--tags", "origin", `refs/tags/${tagName}`]);
 if (remoteTagSha) {
   const [existingSha, existingRef] = remoteTagSha.split(/\s+/, 2);
   assert.equal(existingRef, `refs/tags/${tagName}`, `unexpected remote tag ref for ${tagName}`);

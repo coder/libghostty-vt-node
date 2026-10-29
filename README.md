@@ -176,7 +176,7 @@ The package has four layers:
 ## Global Side Effects
 
 - Network and disk: every `npm run build:libghostty` fetches the pinned Ghostty commit, by default into `vendor/ghostty`, and installs `libghostty-vt` and `ghostty-source.json`, by default into `vendor/libghostty-vt`. `GHOSTTY_SOURCE_DIR` and `LIBGHOSTTY_VT_PREFIX` change these paths [scripts/build-libghostty-vt.sh:GHOSTTY_REPO].
-- Disk: `npm run build:native` runs `node-gyp rebuild` [package.json:scripts.build:native], and `npm run build` writes `dist/` [tsconfig.json:outDir]. `npm run build:prebuild` runs `prebuildify --napi` [package.json:scripts.build:prebuild]. `npm run assemble:prebuilds` deletes and rebuilds `prebuilds/` [scripts/assemble-prebuilds.mjs:targetRoot].
+- Disk: `npm run build:native` runs `node-gyp rebuild` [package.json:scripts.build:native], and `npm run build` writes `dist/` [tsconfig.json:outDir]. `npm run build:prebuild` runs `prebuildify --napi` [package.json:scripts.build:prebuild]. `npm run assemble:prebuilds` replaces `prebuilds/` after its checks pass [scripts/assemble-prebuilds.mjs:targetRoot].
 - Remote state: the release tag script pushes `v<version>` to `origin` [scripts/create-release-tag.mjs:git]. The mise task `publish` runs `npm publish --access public --tag "$(node scripts/resolve-npm-publish-tag.mjs)"` [mise.toml:tasks.publish]. `.github/workflows/publish.yml` also creates or updates a GitHub Release, and `.github/workflows/release-changelog.yml` commits a `CHANGELOG.md` entry to the release PR branch, pushes it, and starts `ci.yml`.
 - Runtime memory: each `createTerminal` call allocates a native terminal. `dispose()` or garbage collection frees it [native/terminal.cc:TerminalWrap::~TerminalWrap].
 
