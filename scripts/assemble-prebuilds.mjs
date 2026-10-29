@@ -75,6 +75,8 @@ try {
     assert.ok(hasNodeAddon(platformPath), `assembled platform directory has no .node addon: ${platformPath}`);
   }
 
+  // A run that died mid-swap with the same PID can leave this behind.
+  rmSync(previousRoot, { recursive: true, force: true });
   if (existsSync(targetRoot)) renameSync(targetRoot, previousRoot);
   renameSync(stagingRoot, targetRoot);
 } catch (error) {

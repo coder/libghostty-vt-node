@@ -35,12 +35,19 @@ const gitEnv = {
   GIT_COMMITTER_EMAIL: "fixture@example.com",
 };
 
+// The parent's environment must not steer the scripts or git in the fixtures.
+function baseEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const name of ["PREBUILDS_ONLY", "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"]) delete env[name];
+  return env;
+}
+
 function run(root: string, script: string, args: string[] = [], env: Record<string, string> = {}): SpawnSyncReturns<string> {
   return spawnSync(process.execPath, [join(root, "scripts", script), ...args], {
     cwd: root,
     encoding: "utf8",
     env: {
-      ...process.env,
+      ...baseEnv(),
       GITHUB_REF_TYPE: "",
       GITHUB_REF_NAME: "",
       NPM_PUBLISH_TAG: "",
@@ -53,7 +60,7 @@ function run(root: string, script: string, args: string[] = [], env: Record<stri
 }
 
 function git(cwd: string, ...args: string[]): string {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, ...gitEnv } });
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", env: { ...baseEnv(), ...gitEnv } });
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.trim();
 }
@@ -103,7 +110,9 @@ describe("create-release-tag.mjs", () => {
   }
 
   it("fails without tagging when git ls-remote fails", () => {
-    const { root } = makeRepo(join(tmpdir(), "ghostty-vt-missing-origin-does-not-exist"));
+    const parent = mkdtempSync(join(tmpdir(), "ghostty-vt-no-origin-"));
+    roots.push(parent);
+    const { root } = makeRepo(join(parent, "missing"));
     const result = run(root, "create-release-tag.mjs");
     expect(result.status).not.toBe(0);
     expect(git(root, "tag", "--list", "v1.2.3")).toBe("");

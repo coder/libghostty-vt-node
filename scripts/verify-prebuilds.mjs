@@ -20,10 +20,11 @@ if (platforms.length === 0) {
   throw new Error("No prebuild platform directories found.");
 }
 
-// node-gyp-build tries build/Release before prebuilds/, and prebuildify leaves
-// an addon in build/Release. PREBUILDS_ONLY makes it skip build/Release, so this
-// check fails unless a prebuild loads. node-gyp-build reads the variable when it
-// is first loaded, so set it before dist/index.js loads it.
+// node-gyp-build tries build/Release before prebuilds/, so a stale addon from
+// an earlier `npm run build:native` would pass this check. PREBUILDS_ONLY makes
+// it skip build/Release, so the check fails unless a prebuild loads.
+// node-gyp-build reads the variable when it is first loaded, so set it before
+// dist/index.js loads it.
 process.env.PREBUILDS_ONLY = "1";
 const { getNativeInfo } = await import("../dist/index.js");
 const info = getNativeInfo();
