@@ -254,6 +254,38 @@ describeIfNative("GhosttyVtTerminal", () => {
     }
   });
 
+  it("encodes the event and geometry values it validated when getters change", () => {
+    const term = createTerminal({ cols: 80, rows: 24 });
+    try {
+      term.feed("\x1b[?1000h\x1b[?1006h");
+      const expected = Buffer.from("\x1b[<0;4;4M");
+
+      let xReads = 0;
+      const event = {
+        action: "press",
+        button: "left",
+        get x() {
+          return xReads++ === 0 ? 3 : 1e30;
+        },
+        y: 3,
+      } as const;
+      expect(term.encodeMouse(event, { geometry: unitGeometry })).toEqual(expected);
+
+      let widthReads = 0;
+      const geometry = {
+        ...unitGeometry,
+        get screenWidth() {
+          return widthReads++ === 0 ? 80 : 0;
+        },
+      };
+      expect(
+        term.encodeMouse({ action: "press", button: "left", x: 3, y: 3 }, { geometry }),
+      ).toEqual(expected);
+    } finally {
+      term.dispose();
+    }
+  });
+
   it("covers button tracking, legacy releases, X10 limits, and UTF-8 coordinates", () => {
     const cases = [
       { mode: "\x1b[?1002h\x1b[?1006h", action: "motion", button: "left", x: 2, expected: Buffer.from("\x1b[<32;3;4M") },
