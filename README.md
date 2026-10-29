@@ -63,6 +63,8 @@ All dimensions are validated as positive integers. Using a terminal after `dispo
 
 `snapshot()` reports the cursor position (`cursorRow`, `cursorCol`) and its DECTCEM visibility (`cursorVisible`, toggled by `ESC[?25h` and `ESC[?25l`). With `includeCells: true`, each cell reports its text, width, optional `foreground` and `background` colors, and these SGR attributes: `bold`, `faint`, `italic`, `underline`, `inverse`, `invisible`, and `strikethrough`. An attribute is present only when it is set. `inverse` is the raw SGR 7 flag: `foreground` and `background` are not swapped, so consumers apply reverse video with their own default colors.
 
+The pinned Ghostty ignores the DECSTR soft reset (`ESC[!p`). After it, a hidden cursor stays hidden and SGR attributes stay set. Programs that reset with `ESC c` (RIS) are unaffected.
+
 ### Mouse encoding
 
 `encodeMouse` returns a `Buffer` containing the terminal input bytes for one
