@@ -23,21 +23,21 @@ This check found F1 in the code before `4aa7039`. The addon kept its class in on
 
 ## History: finding F2, fixed
 
-This check found F2 in `encodeMouse` before `a414395`. `TerminalWrap::EncodeMouse` copied `terminal_` and `mouse_encoder_` into locals, and then read its arguments with `Get()`. `Get()` runs getters, including a getter on `Object.prototype` for a key that `src/index.ts` leaves out of the object it passes (`button`, `modifiers`). A getter that called `dispose()` made the libghostty calls use freed handles. Through the package API, the call then encoded with another terminal's encoder state. Through the raw native object, the process crashed. The fix reads every argument first, then takes the handles, and runs no JS until the call returns. `model/mutant-handles-before-reads.cfg` is the old code, and `run.sh` checks at each run that it still breaks `NoCallOnDeadHandle`. `test/mouse-safety.test.ts` replays the getter cases in child processes.
+This check found F2 in `encodeMouse` while #12 was in review, so the bug never reached main. #12 landed with the fix as `7366b75`. `TerminalWrap::EncodeMouse` copied `terminal_` and `mouse_encoder_` into locals, and then read its arguments with `Get()`. `Get()` runs getters, including a getter on `Object.prototype` for a key that `src/index.ts` leaves out of the object it passes (`button`, `modifiers`). A getter that called `dispose()` made the libghostty calls use freed handles. Through the package API, the call then encoded with another terminal's encoder state. Through the raw native object, the process crashed. The fix reads every argument first, then takes the handles, and runs no JS until the call returns. `model/mutant-handles-before-reads.cfg` is the old code, and `run.sh` checks at each run that it still breaks `NoCallOnDeadHandle`. `test/mouse-safety.test.ts` replays the getter cases in child processes.
 
 ## Does my change touch the verified code?
 
 Run this skill when the diff since the sync commit changes any covered code:
 
 ```sh
-git diff --stat d6c5659826a3883da7a1e49ba67986cf8e13b089 -- native/ test/workers.test.ts test/mouse-safety.test.ts src/index.ts src/loader.ts package.json package-lock.json
+git diff --stat 7366b7545170ad77f5151e445c60bbf5bb110d87 -- native/ test/workers.test.ts test/mouse-safety.test.ts src/index.ts src/loader.ts package.json package-lock.json
 ```
 
 Also run it when a change adds a new place that stores a `Napi::Reference`, `Napi::FunctionReference`, or other static or global state in `native/`, or a new path that frees or uses `terminal_` or `mouse_encoder_`. Static or global JS-facing state is the F1 bug class: keep it in the environment's instance data. A native method that copies a handle and then calls `Get()` is the F2 bug class: read every argument before you take the handles.
 
 ## Coverage record
 
-Sync commit: `d6c5659826a3883da7a1e49ba67986cf8e13b089`. At this commit the model describes the code below. Move the sync commit forward only after you confirm that the model still describes the covered code at the new commit.
+Sync commit: `7366b7545170ad77f5151e445c60bbf5bb110d87`. At this commit the model describes the code below. Move the sync commit forward only after you confirm that the model still describes the covered code at the new commit.
 
 | Code | Model |
 |---|---|
