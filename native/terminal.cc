@@ -42,8 +42,6 @@ void ThrowResult(Napi::Env env, const char* operation, GhosttyResult result) {
 
 }  // namespace
 
-Napi::FunctionReference TerminalWrap::constructor;
-
 void TerminalWrap::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function func = DefineClass(
       env,
@@ -58,13 +56,20 @@ void TerminalWrap::Init(Napi::Env env, Napi::Object exports) {
           InstanceMethod("dispose", &TerminalWrap::Dispose),
       });
 
-  constructor = Napi::Persistent(func);
-  constructor.SuppressDestruct();
+  // Each Node environment (the main thread and every worker_threads Worker)
+  // runs Init and gets its own class. Keep the class reference in this
+  // environment's instance data, never in a static: a reference belongs to
+  // the environment that created it. Node deletes the instance data when the
+  // environment shuts down.
+  delete env.GetInstanceData<Napi::FunctionReference>();
+  env.SetInstanceData<Napi::FunctionReference>(new Napi::FunctionReference(Napi::Persistent(func)));
   exports.Set("createTerminal", Napi::Function::New(env, CreateTerminal));
 }
 
 Napi::Object TerminalWrap::Create(Napi::Env env, const Napi::Object& options) {
-  return constructor.New({options});
+  Napi::FunctionReference* constructor = env.GetInstanceData<Napi::FunctionReference>();
+  assert(constructor != nullptr && "TerminalWrap::Init must run in this environment first");
+  return constructor->New({options});
 }
 
 TerminalWrap::TerminalWrap(const Napi::CallbackInfo& info)

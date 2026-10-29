@@ -20,8 +20,6 @@ class TerminalWrap final : public Napi::ObjectWrap<TerminalWrap> {
   ~TerminalWrap() override;
 
  private:
-  static Napi::FunctionReference constructor;
-
   void DisposeNative();
   GhosttyTerminal RequireTerminal(Napi::Env env);
   Napi::Value Feed(const Napi::CallbackInfo& info);
