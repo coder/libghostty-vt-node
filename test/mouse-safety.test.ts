@@ -8,6 +8,9 @@ const geometry = {
   paddingTop: 0, paddingBottom: 0, paddingLeft: 0, paddingRight: 0,
 };
 
+// Child processes load src/ through tsx, as vitest does, so they need no dist/ build.
+const childArgs = ["--import", "tsx", "--input-type=module", "-e"];
+
 // Exercise the C++ boundary independently of the public TypeScript normalizer.
 describe.each([
   ["public", createTerminal],
@@ -16,12 +19,12 @@ describe.each([
   it("rejects unsafe UTF-8 codepoints without terminating the process", () => {
     // Run untrusted native edge cases in a child so a regression cannot abort
     // the entire suite when Ghostty is built with runtime safety enabled.
-    const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
+    const child = spawnSync(process.execPath, [...childArgs, `
       import assert from "node:assert/strict";
       import { createRequire } from "node:module";
       const require = createRequire(import.meta.url);
       const { createTerminal } = ${_name === "public"
-        ? 'await import("./dist/index.js")'
+        ? 'await import("./src/index.ts")'
         : 'require("node-gyp-build")(process.cwd())'};
       const term = createTerminal({ cols: 80, rows: 24 });
       term.feed("\\x1b[?1000h\\x1b[?1005h");
@@ -44,12 +47,12 @@ describe.each([
     // Native Get() runs getters, including Object.prototype getters for keys the
     // TypeScript wrapper omits. Such JS can dispose the terminal or re-enter
     // encodeMouse with other geometry. Run in a child: a regression can crash.
-    const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
+    const child = spawnSync(process.execPath, [...childArgs, `
       import assert from "node:assert/strict";
       import { createRequire } from "node:module";
       const require = createRequire(import.meta.url);
       const { createTerminal } = ${_name === "public"
-        ? 'await import("./dist/index.js")'
+        ? 'await import("./src/index.ts")'
         : 'require("node-gyp-build")(process.cwd())'};
       const geometry = ${JSON.stringify(geometry)};
       const others = [];
