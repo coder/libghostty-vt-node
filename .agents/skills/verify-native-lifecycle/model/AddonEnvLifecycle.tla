@@ -26,11 +26,22 @@ CONSTANTS
                       \* ghostty_terminal_free (native/terminal.cc). Code: TRUE.
     TsDisposedGuard,  \* Terminal.#assertUsable throws after dispose
                       \* (src/index.ts). Code: TRUE.
-    NativeNullGuard   \* TerminalWrap::RequireTerminal throws when terminal_ is
-                      \* nullptr (native/terminal.cc). Code: TRUE.
+    NativeNullGuard,  \* TerminalWrap::RequireTerminal throws when terminal_ is
+                      \* nullptr, and RequireMouseEncoder when mouse_encoder_
+                      \* is nullptr (native/terminal.cc). Code: TRUE.
+    EncoderClearsPtr, \* DisposeNative sets `mouse_encoder_ = nullptr` after
+                      \* ghostty_mouse_encoder_free. Code: TRUE.
+    JsInNativeRead,   \* JS can run while TerminalWrap::EncodeMouse reads its
+                      \* arguments with Get(): a getter on Object.prototype for a
+                      \* key that src/index.ts omits (`button`, `modifiers`), or a
+                      \* caller that holds the raw native object. Code: TRUE.
+    TakeHandlesLast   \* EncodeMouse reads every argument before it copies
+                      \* terminal_ and mouse_encoder_ into locals. Code: TRUE.
+                      \* FALSE is the code before the F2 fix.
 
 ASSUME CtorStorage \in {"process_static", "per_env"}
-ASSUME {DisposeClearsPtr, TsDisposedGuard, NativeNullGuard} \subseteq BOOLEAN
+ASSUME {DisposeClearsPtr, TsDisposedGuard, NativeNullGuard,
+        EncoderClearsPtr, JsInNativeRead, TakeHandlesLast} \subseteq BOOLEAN
 ASSUME Main \notin Workers
 
 Envs == {Main} \cup Workers
@@ -55,29 +66,54 @@ NoHandleUse == [op |-> "none", t |-> None, state |-> "none"]
 \* ptr:    TerminalWrap::terminal_ != nullptr
 \* handle: the GhosttyTerminal: "none", "live", or "freed"
 \* frees:  how many times ghostty_terminal_free ran on this handle
-Unborn == [in |-> None, js |-> "none", ptr |-> FALSE, handle |-> "none", frees |-> 0]
+\* encPtr, enc, encFrees: the same three for mouse_encoder_ (GhosttyMouseEncoder)
+\* call:   where an encodeMouse call on this terminal is: "idle"; "ts" (in
+\*         Terminal.encodeMouse after #assertUsable, while the normalizers read
+\*         the caller's objects, so caller getters can run); "native" (in
+\*         TerminalWrap::EncodeMouse, reading arguments with Get())
+\* took:   what the native locals `terminal` and `encoder` hold: "none" (not
+\*         copied yet), "ptr" (copies of terminal_ and mouse_encoder_), "null"
+Unborn == [in |-> None, js |-> "none", ptr |-> FALSE, handle |-> "none", frees |-> 0,
+           encPtr |-> FALSE, enc |-> "none", encFrees |-> 0, call |-> "idle", took |-> "none"]
+Born(e) == [in |-> e, js |-> "live", ptr |-> TRUE, handle |-> "live", frees |-> 0,
+            encPtr |-> TRUE, enc |-> "live", encFrees |-> 0, call |-> "idle", took |-> "none"]
 
 SlotOf(e) == IF CtorStorage = "process_static" THEN slot ELSE slot[e]
 SetSlot(e, owner) ==
     IF CtorStorage = "process_static" THEN owner ELSE [slot EXCEPT ![e] = owner]
 
 \* TerminalWrap::DisposeNative (native/terminal.cc):
-\*   if (terminal_ == nullptr) return;
-\*   ghostty_terminal_free(terminal_);
-\*   terminal_ = nullptr;
+\*   if (mouse_encoder_ != nullptr) { ghostty_mouse_encoder_free(..); mouse_encoder_ = nullptr; }
+\*   if (terminal_ != nullptr) { ghostty_terminal_free(terminal_); terminal_ = nullptr; }
 DisposeNative(r) ==
-    IF r.ptr
-    THEN [r EXCEPT !.handle = "freed", !.frees = r.frees + 1, !.ptr = ~DisposeClearsPtr]
-    ELSE r
+    LET r1 == IF r.encPtr
+              THEN [r EXCEPT !.enc = "freed", !.encFrees = r.encFrees + 1,
+                             !.encPtr = ~EncoderClearsPtr]
+              ELSE r
+    IN IF r1.ptr
+       THEN [r1 EXCEPT !.handle = "freed", !.frees = r1.frees + 1, !.ptr = ~DisposeClearsPtr]
+       ELSE r1
+
+\* The state of the handles that the libghostty calls in EncodeMouse reach.
+CallState(r, took) ==
+    IF took = "ptr"
+    THEN IF r.handle = "live" /\ r.enc = "live" THEN "live" ELSE "freed"
+    ELSE "null"
+Usable(r) == r.ptr /\ r.encPtr
 
 TypeOK ==
     /\ env \in [Envs -> {"idle", "loaded", "exited"}]
     /\ \A t \in Terminals :
          /\ term[t].in \in Envs \cup {None}
-         /\ term[t].js \in {"none", "live", "disposed", "dropped", "finalized"}
+         /\ term[t].js \in {"none", "failed", "live", "disposed", "dropped", "finalized"}
          /\ term[t].ptr \in BOOLEAN
          /\ term[t].handle \in {"none", "live", "freed"}
          /\ term[t].frees \in 0..2
+         /\ term[t].encPtr \in BOOLEAN
+         /\ term[t].enc \in {"none", "live", "freed"}
+         /\ term[t].encFrees \in 0..2
+         /\ term[t].call \in {"idle", "ts", "native"}
+         /\ term[t].took \in {"none", "ptr", "null"}
 
 Init ==
     /\ env = [e \in Envs |-> "idle"]
@@ -112,14 +148,25 @@ LoadAddon(e) ==
 (* with env.GetInstanceData; process_static reads the static. Then         *)
 (* FunctionReference::New runs in the env stored in the reference, not in  *)
 (* the caller's env. The TerminalWrap constructor calls                    *)
-(* ghostty_terminal_new.                                                   *)
+(* ghostty_terminal_new, then ghostty_mouse_encoder_new.                  *)
 (***************************************************************************)
 CreateTerminal(e, t) ==
     /\ env[e] = "loaded"
     /\ term[t].js = "none"
     /\ refUse' = [op |-> "createTerminal uses class reference", by |-> e, owner |-> SlotOf(e)]
-    /\ term' = [term EXCEPT ![t] =
-                  [in |-> e, js |-> "live", ptr |-> TRUE, handle |-> "live", frees |-> 0]]
+    /\ term' = [term EXCEPT ![t] = Born(e)]
+    /\ handleUse' = NoHandleUse
+    /\ UNCHANGED <<env, slot>>
+
+\* ghostty_mouse_encoder_new fails: the constructor frees the terminal, sets
+\* terminal_ = nullptr, and throws. ~TerminalWrap does not run, because the
+\* C++ constructor did not finish. No JS object exists.
+CreateFails(e, t) ==
+    /\ env[e] = "loaded"
+    /\ term[t].js = "none"
+    /\ refUse' = [op |-> "createTerminal uses class reference", by |-> e, owner |-> SlotOf(e)]
+    /\ term' = [term EXCEPT ![t] = [Unborn EXCEPT !.in = e, !.js = "failed",
+                                                   !.handle = "freed", !.frees = 1]]
     /\ handleUse' = NoHandleUse
     /\ UNCHANGED <<env, slot>>
 
@@ -154,8 +201,79 @@ Dispose(t) ==
     /\ handleUse' = NoHandleUse
     /\ UNCHANGED <<env, slot>>
 
-\* The program drops its last reference to the Terminal object.
+(***************************************************************************)
+(* encodeMouse is three steps, because caller JS can run between them.    *)
+(* EncodeTs: Terminal.encodeMouse runs #assertUsable, then the normalizers *)
+(*   read the caller's event and options. A getter there can run any JS,   *)
+(*   for example dispose() on this terminal.                               *)
+(* EncodeEnter: this.#native.encodeMouse enters TerminalWrap::EncodeMouse, *)
+(*   which reads its arguments with Get(). Before the F2 fix              *)
+(*   (TakeHandlesLast = FALSE), it first copied terminal_ and             *)
+(*   mouse_encoder_ into locals (RequireTerminal, RequireMouseEncoder).    *)
+(* EncodeCall: the reads end. With TakeHandlesLast, EncodeMouse checks and *)
+(*   copies the pointers here. Then it calls ghostty_terminal_mode_get and *)
+(*   the ghostty_mouse_encoder_* functions, and no JS runs until return.   *)
+(* Without JsInNativeRead, EncodeEnter and EncodeCall are one step.        *)
+(***************************************************************************)
+EncodeTs(t) ==
+    LET r == term[t] IN
+    /\ r.js \in {"live", "disposed"}
+    /\ env[r.in] = "loaded"
+    /\ r.call = "idle"
+    /\ term' = IF TsDisposedGuard /\ r.js = "disposed"
+               THEN term                                 \* throws "disposed"
+               ELSE [term EXCEPT ![t].call = "ts"]
+    /\ refUse' = NoRefUse
+    /\ handleUse' = NoHandleUse
+    /\ UNCHANGED <<env, slot>>
+
+\* What the native locals hold after RequireTerminal and RequireMouseEncoder,
+\* or "stop" when a null guard throws.
+Take(r) ==
+    IF Usable(r) THEN "ptr"
+    ELSE IF NativeNullGuard THEN "stop" ELSE "null"
+
+CallNow(t, took) ==
+    /\ handleUse' = IF took = "stop" THEN NoHandleUse
+                    ELSE [op |-> "libghostty call", t |-> t, state |-> CallState(term[t], took)]
+    /\ term' = [term EXCEPT ![t].call = "idle", ![t].took = "none"]
+
+EncodeEnter(t) ==
+    LET r == term[t] IN
+    /\ r.call = "ts"
+    /\ env[r.in] = "loaded"
+    /\ IF ~JsInNativeRead
+       THEN CallNow(t, Take(r))
+       ELSE /\ handleUse' = NoHandleUse
+            /\ term' = IF TakeHandlesLast
+                       THEN [term EXCEPT ![t].call = "native"]
+                       ELSE IF Take(r) = "stop"
+                            THEN [term EXCEPT ![t].call = "idle"]
+                            ELSE [term EXCEPT ![t].call = "native", ![t].took = Take(r)]
+    /\ refUse' = NoRefUse
+    /\ UNCHANGED <<env, slot>>
+
+EncodeCall(t) ==
+    LET r == term[t] IN
+    /\ JsInNativeRead
+    /\ r.call = "native"
+    /\ env[r.in] = "loaded"
+    /\ CallNow(t, IF TakeHandlesLast THEN Take(r) ELSE r.took)
+    /\ refUse' = NoRefUse
+    /\ UNCHANGED <<env, slot>>
+
+\* A getter throws in either read phase: the call ends without a libghostty call.
+EncodeThrows(t) ==
+    /\ term[t].call \in {"ts", "native"}
+    /\ term' = [term EXCEPT ![t].call = "idle", ![t].took = "none"]
+    /\ refUse' = NoRefUse
+    /\ handleUse' = NoHandleUse
+    /\ UNCHANGED <<env, slot>>
+
+\* The program drops its last reference to the Terminal object. An object
+\* whose method is still running is reachable, so it cannot be dropped then.
 Drop(t) ==
+    /\ term[t].call = "idle"
     /\ term[t].js \in {"live", "disposed"}
     /\ env[term[t].in] = "loaded"
     /\ term' = [term EXCEPT ![t].js = "dropped"]
@@ -181,6 +299,8 @@ Finalize(t) ==
 (***************************************************************************)
 WorkerExit(w) ==
     /\ env[w] = "loaded"
+    \* A terminating Worker first unwinds its JS stack (EncodeThrows).
+    /\ \A t \in Terminals : term[t].in = w => term[t].call = "idle"
     /\ env' = [env EXCEPT ![w] = "exited"]
     /\ term' = [t \in Terminals |->
                   IF term[t].in = w /\ term[t].js \in {"live", "disposed", "dropped"}
@@ -193,6 +313,11 @@ WorkerExit(w) ==
 Next ==
     \/ \E e \in Envs : LoadAddon(e)
     \/ \E e \in Envs, t \in Terminals : CreateTerminal(e, t)
+    \/ \E e \in Envs, t \in Terminals : CreateFails(e, t)
+    \/ \E t \in Terminals : EncodeTs(t)
+    \/ \E t \in Terminals : EncodeEnter(t)
+    \/ \E t \in Terminals : EncodeCall(t)
+    \/ \E t \in Terminals : EncodeThrows(t)
     \/ \E t \in Terminals : Use(t)
     \/ \E t \in Terminals : Dispose(t)
     \/ \E t \in Terminals : Drop(t)
@@ -216,7 +341,10 @@ LoadDeletesOnlyOwnRef ==
 \* libghostty frees each terminal handle at most once.
 HandleFreedOnce == \A t \in Terminals : term[t].frees <= 1
 
-\* No libghostty call reaches a freed or null terminal handle.
+\* libghostty frees each mouse encoder at most once.
+EncoderFreedOnce == \A t \in Terminals : term[t].encFrees <= 1
+
+\* No libghostty call reaches a freed or null terminal or mouse encoder handle.
 NoCallOnDeadHandle ==
     handleUse.op = "libghostty call" => handleUse.state = "live"
 
