@@ -15,7 +15,7 @@ Package API (exported by `index.ts`):
 - `SnapshotOptions`: `{ includeScrollback?: boolean; includeCells?: boolean }` [src/types.ts:SnapshotOptions]
 - `VisibleLine`: `{ row: number; text: string }` [src/types.ts:VisibleLine]
 - `SnapshotCell`: `{ row; col; text; width; bold?; italic?; underline?; faint?; inverse?; invisible?; strikethrough?; foreground?; background? }` [src/types.ts:SnapshotCell]
-- `TerminalSnapshot`: `{ cols; rows; cursorRow; cursorCol; cursorVisible?; isAltScreen; visibleLines; scrollbackLines?; cells? }` [src/types.ts:TerminalSnapshot]
+- `TerminalSnapshot`: `{ cols; rows; cursorRow; cursorCol; cursorVisible; isAltScreen; visibleLines; scrollbackLines?; cells? }` [src/types.ts:TerminalSnapshot]
 - `MouseAction`: `"press" | "release" | "motion"`. `MouseButton`: `"left" | "right" | "middle" | "four"` to `"eleven"` [src/types.ts:MouseButton]
 - `MouseInputEvent`: `{ action; button?; x; y; modifiers?: MouseModifiers }`, and `MouseModifiers`: `{ shift?; ctrl?; alt? }` [src/types.ts:MouseInputEvent] [src/types.ts:MouseModifiers]
 - `MouseEncoderOptions`: `{ geometry: MouseGeometry; anyButtonPressed?; trackLastCell? }`. `MouseGeometry`: `{ screenWidth; screenHeight; cellWidth; cellHeight; paddingTop?; paddingBottom?; paddingRight?; paddingLeft? }` [src/types.ts:MouseEncoderOptions] [src/types.ts:MouseGeometry]
