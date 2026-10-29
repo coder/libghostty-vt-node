@@ -2,6 +2,8 @@
 
 All notable user-facing changes to this package will be documented in this file.
 
+## [Unreleased]
+
 ## [v0.1.0-beta.1](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.1) - 2026-04-24
 
 ## Added
