@@ -56,23 +56,28 @@ async function stopWorker(w) {
 }
 `;
 
+// The child gets a bounded run, and the test waits longer than that, so a
+// hung child fails with its own output instead of a Vitest timeout.
+const CHILD_TIMEOUT_MS = 20_000;
+const TEST_TIMEOUT_MS = 30_000;
+
 function runScenario(body: string) {
   const script = `${prelude}\n(async () => { ${body}\n console.log("done"); })().catch((err) => { console.error(err); process.exit(1); });`;
   return spawnSync(process.execPath, ["-e", script], {
     cwd: root,
     encoding: "utf8",
     env: { ...process.env, ADDON_ROOT: root },
-    timeout: 30_000,
+    timeout: CHILD_TIMEOUT_MS,
   });
 }
 
 function expectSurvived(result: ReturnType<typeof runScenario>) {
-  expect({ signal: result.signal, status: result.status, stderr: result.stderr }).toEqual({
-    signal: null,
-    status: 0,
-    stderr: "",
-  });
-  expect(result.stdout.trim()).toBe("done");
+  // stderr is not asserted (NODE_OPTIONS such as --inspect can print to it),
+  // but it is the failure message: it holds the V8 fatal error or the stack.
+  expect(
+    { signal: result.signal, status: result.status, stdout: result.stdout.trim() },
+    result.stderr,
+  ).toEqual({ signal: null, status: 0, stdout: "done" });
 }
 
 describeIfNative("worker_threads", () => {
@@ -85,7 +90,7 @@ describeIfNative("worker_threads", () => {
         await workerUses(w, "w-2");
         await stopWorker(w);`),
     );
-  });
+  }, TEST_TIMEOUT_MS);
 
   it("creates terminals in the main thread after a worker that loaded the addon exits", () => {
     expectSurvived(
@@ -95,7 +100,7 @@ describeIfNative("worker_threads", () => {
         await stopWorker(w);
         use("main-2");`),
     );
-  });
+  }, TEST_TIMEOUT_MS);
 
   it("creates terminals in each of two workers", () => {
     expectSurvived(
@@ -108,5 +113,5 @@ describeIfNative("worker_threads", () => {
         await workerUses(w2, "w2-3");
         await stopWorker(w2);`),
     );
-  });
+  }, TEST_TIMEOUT_MS);
 });
