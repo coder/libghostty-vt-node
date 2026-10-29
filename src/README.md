@@ -13,8 +13,8 @@ Package API (exported by `index.ts`):
 - `CreateTerminalOptions`: `{ cols: number; rows: number; scrollbackLimit?: number }` [src/types.ts:CreateTerminalOptions]
 - `SnapshotOptions`: `{ includeScrollback?: boolean; includeCells?: boolean }` [src/types.ts:SnapshotOptions]
 - `VisibleLine`: `{ row: number; text: string }` [src/types.ts:VisibleLine]
-- `SnapshotCell`: `{ row; col; text; width; bold?; italic?; underline?; foreground?; background? }` [src/types.ts:SnapshotCell]
-- `TerminalSnapshot`: `{ cols; rows; cursorRow; cursorCol; isAltScreen; visibleLines; scrollbackLines?; cells? }` [src/types.ts:TerminalSnapshot]
+- `SnapshotCell`: `{ row; col; text; width; bold?; italic?; underline?; faint?; inverse?; invisible?; strikethrough?; foreground?; background? }` [src/types.ts:SnapshotCell]
+- `TerminalSnapshot`: `{ cols; rows; cursorRow; cursorCol; cursorVisible?; isAltScreen; visibleLines; scrollbackLines?; cells? }` [src/types.ts:TerminalSnapshot]
 - `GhosttyVtTerminal`: `feed(data)`, `resize(cols, rows)`, `snapshot(options?)`, `getVisibleText()`, optional `formatPlain()` and `formatHtml()`, and `dispose()` [src/types.ts:GhosttyVtTerminal]. The object that `createTerminal` returns has both format methods [src/index.ts:Terminal].
 - `NativeInfo`: `{ packageVersion; napiVersion; ghosttyVersion?; ghosttyCommit?; platform; arch }` [src/types.ts:NativeInfo]
 
