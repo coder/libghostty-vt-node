@@ -9,6 +9,52 @@ export interface SnapshotOptions {
   includeCells?: boolean;
 }
 
+export type MouseAction = "press" | "release" | "motion";
+
+export type MouseButton =
+  | "left"
+  | "right"
+  | "middle"
+  | "four"
+  | "five"
+  | "six"
+  | "seven"
+  | "eight"
+  | "nine"
+  | "ten"
+  | "eleven";
+
+export interface MouseModifiers {
+  shift?: boolean;
+  ctrl?: boolean;
+  alt?: boolean;
+}
+
+export interface MouseInputEvent {
+  action: MouseAction;
+  button?: MouseButton;
+  x: number;
+  y: number;
+  modifiers?: MouseModifiers;
+}
+
+export interface MouseGeometry {
+  screenWidth: number;
+  screenHeight: number;
+  cellWidth: number;
+  cellHeight: number;
+  paddingTop?: number;
+  paddingBottom?: number;
+  paddingRight?: number;
+  paddingLeft?: number;
+}
+
+export interface MouseEncoderOptions {
+  geometry: MouseGeometry;
+  anyButtonPressed?: boolean;
+  trackLastCell?: boolean;
+}
+
 export interface VisibleLine {
   row: number;
   text: string;
@@ -56,6 +102,7 @@ export interface TerminalSnapshot {
 export interface GhosttyVtTerminal {
   feed(data: Uint8Array | Buffer | string): void;
   resize(cols: number, rows: number): void;
+  encodeMouse(event: MouseInputEvent, options: MouseEncoderOptions): Buffer;
   snapshot(options?: SnapshotOptions): TerminalSnapshot;
   getVisibleText(): string;
   formatPlain?(): string;
@@ -75,6 +122,7 @@ export interface NativeInfo {
 export interface NativeTerminal {
   feed(data: Uint8Array | Buffer | string): void;
   resize(cols: number, rows: number): void;
+  encodeMouse(event: MouseInputEvent, options: MouseEncoderOptions): Buffer;
   snapshot(options?: SnapshotOptions): TerminalSnapshot;
   getVisibleText(): string;
   formatPlain(): string;

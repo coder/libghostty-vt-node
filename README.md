@@ -27,6 +27,21 @@ const term = createTerminal({ cols: 80, rows: 24, scrollbackLimit: 1000 });
 term.feed("hello\n");
 term.feed("\x1b[31mred\x1b[0m");
 
+// The child enables normal mouse tracking plus SGR encoding.
+term.feed("\x1b[?1000h\x1b[?1006h");
+const mouseBytes = term.encodeMouse(
+  { action: "press", button: "left", x: 25, y: 45 },
+  {
+    geometry: {
+      screenWidth: 800,
+      screenHeight: 600,
+      cellWidth: 10,
+      cellHeight: 20,
+    },
+  },
+);
+// Write mouseBytes to the child PTY.
+
 console.log(getNativeInfo());
 console.log(term.getVisibleText());
 console.log(term.snapshot({ includeCells: true }));
@@ -38,13 +53,57 @@ The public contract is intentionally small:
 
 - `createTerminal({ cols, rows, scrollbackLimit })`
 - `feed(data)`, `resize(cols, rows)`, `snapshot(options)`, `getVisibleText()`
+- `encodeMouse(event, options)` for mode-aware terminal mouse bytes
 - optional debug formatters `formatPlain()` and `formatHtml()`
 - explicit, idempotent `dispose()`
 - `getNativeInfo()` for package, Node-API, platform, and Ghostty build metadata
+- `supportsMouseInput`, an import-time capability marker that requires no native allocation
 
 All dimensions are validated as positive integers. Using a terminal after `dispose()` throws.
 
 `snapshot()` reports the cursor position (`cursorRow`, `cursorCol`) and its DECTCEM visibility (`cursorVisible`, toggled by `ESC[?25h` and `ESC[?25l`). With `includeCells: true`, each cell reports its text, width, optional `foreground` and `background` colors, and these SGR attributes: `bold`, `faint`, `italic`, `underline`, `inverse`, `invisible`, and `strikethrough`. An attribute is present only when it is set. `inverse` is the raw SGR 7 flag: `foreground` and `background` are not swapped, so consumers apply reverse video with their own default colors.
+
+### Mouse encoding
+
+`encodeMouse` returns a `Buffer` containing the terminal input bytes for one
+normalized mouse event. It returns an empty buffer when the child has mouse
+tracking disabled or when its negotiated mode suppresses that event. The child
+selects X10, UTF-8, SGR, URXVT, or SGR-pixels through the output previously
+passed to `feed`; callers do not choose a wire format independently.
+
+Event coordinates are finite surface-space numbers. Geometry is explicit so
+SGR-pixels remains accurate and the other formats can map the same position to
+a terminal cell. `anyButtonPressed` supplies the caller-owned aggregate button
+state needed for drag events outside the viewport. `trackLastCell` asks Ghostty
+to suppress duplicate motion events within one unchanged cell.
+
+Geometry must describe the same grid as `createTerminal` or the latest `resize`:
+subtract padding from the screen dimensions, then divide by cell size. The
+binding does not reconcile mismatched grids. Dimensions and padding must fit
+unsigned 32-bit integers, total padding must not exceed the screen dimensions,
+and the resulting grid must fit 65535 cells per axis. Coordinates are converted
+to 32-bit floats by the C API; after padding is removed they must fit signed
+32-bit pixel coordinates and a cell index below 65536. Unrepresentable input
+throws `RangeError` before reaching Ghostty, including for suppressed events.
+Ordinary negative and off-screen positions remain supported.
+
+When UTF-8 mouse mode (1005) is set, the binding also rejects clamped cell
+coordinates whose encoded value would be a Unicode surrogate, or whose row
+would overflow the pinned encoder's 16-bit arithmetic. This conservative guard
+applies while 1005 remains set even if another mouse format was selected later.
+
+With the pinned Ghostty version, any non-empty `feed()` resets motion
+deduplication when the next mouse event refreshes negotiated modes. Geometry
+changes also reset it. SGR-pixels reports motion even within the same cell.
+
+Buttons `four`, `five`, `six`, and `seven` conventionally represent wheel up,
+wheel down, wheel left, and wheel right. The binding keeps Ghostty's names at
+this low-level API boundary so consumers can provide their own user-facing
+aliases.
+Send wheel events as `press` only: a wheel release in legacy formats is encoded
+as an ordinary button release. Buttons `ten` and `eleven` have no button codes in
+the pinned Ghostty encoder and normally produce an empty buffer; legacy release
+encoding still applies.
 
 ## Native Build
 
@@ -132,6 +191,7 @@ The native layer currently uses these verified `libghostty-vt` C APIs:
 
 - terminal lifecycle and stream processing: `ghostty_terminal_new`, `ghostty_terminal_vt_write`, `ghostty_terminal_resize`, `ghostty_terminal_free`
 - metadata and state: `ghostty_terminal_get`, `ghostty_build_info`
+- mode-aware mouse input: `ghostty_mouse_encoder_*`, `ghostty_mouse_event_*`
 - plain/HTML debug formatting: `ghostty_formatter_terminal_new`, `ghostty_formatter_format_alloc`
 - structured snapshots: `ghostty_terminal_grid_ref`, `ghostty_grid_ref_cell`, `ghostty_grid_ref_graphemes`, `ghostty_grid_ref_style`, `ghostty_cell_get`
 
@@ -149,22 +209,22 @@ The upstream API is still marked unstable by Ghostty. Keep the pinned commit upd
 The package has four layers:
 
 1. A consumer imports `dist/index.js`, which `tsc` compiles from [`src/`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md). `src/index.ts` checks arguments, and `src/loader.ts` loads the native addon with `node-gyp-build` on the first API call.
-2. The addon in [`native/`](./native/README.md) wraps one libghostty-vt `GhosttyTerminal` per `TerminalWrap` object and exports `createTerminal` and `getNativeInfo`.
+2. The addon in [`native/`](./native/README.md) wraps one libghostty-vt `GhosttyTerminal` and one `GhosttyMouseEncoder` per `TerminalWrap` object and exports `createTerminal` and `getNativeInfo`.
 3. `libghostty-vt` is a static library that the addon links. `scripts/build-libghostty-vt.sh` builds it from a pinned Ghostty commit, and `binding.gyp` finds it with `scripts/resolve-libghostty-vt.mjs` (see [`scripts/`](./scripts/README.md)).
 4. The release scripts in [`scripts/`](./scripts/README.md) assemble per-platform prebuilds, tag the release, and pick the npm dist-tag. [`examples/`](https://github.com/coder/libghostty-vt-node/blob/main/examples/README.md) holds the smoke script that the mise task `ci` runs last.
 
 ## Subdirectories & System Boundaries
 
-- `src`: [`src/README.md`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md) - TypeScript package API (`createTerminal`, `getNativeInfo`, and the snapshot types), argument checks, disposal tracking, and the lazy, cached addon loader.
+- `src`: [`src/README.md`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md) - TypeScript package API (`createTerminal`, `getNativeInfo`, `supportsMouseInput`, and the snapshot and mouse types), argument checks, disposal tracking, and the lazy, cached addon loader.
 - `native`: [`./native/README.md`](./native/README.md) - Node-API C++ addon (`TerminalWrap`, JavaScript class `GhosttyVtTerminal`) over the libghostty-vt C API, with per-environment class state for `worker_threads`.
 - `scripts`: [`./scripts/README.md`](./scripts/README.md) - libghostty-vt build and path resolver, prebuild assembly and check, release tag creation, and npm dist-tag choice.
 - `examples`: [`examples/README.md`](https://github.com/coder/libghostty-vt-node/blob/main/examples/README.md) - `smoke.ts`, run by `npm run smoke`.
-- `test` (no contract): vitest suites for the loader, the terminal API, and `worker_threads` loading.
+- `test` (no contract): vitest suites for the loader, the terminal API, the `encodeMouse` limits, and `worker_threads` loading.
 - `dogfood` (no contract): a plain-text proof bundle from the repository bootstrap.
 
 ## Global Invariants
 
-- Arguments are checked in both layers. `createTerminal` options: [src/index.ts:normalizeCreateOptions] (before the addon loads) and [native/terminal.cc:TerminalWrap::TerminalWrap]. `resize`: [src/index.ts:Terminal] and [native/terminal.cc:TerminalWrap::Resize]. `feed`: [src/index.ts:assertFeedData] and [native/terminal.cc:TerminalWrap::Feed]. `snapshot` options: [src/index.ts:normalizeSnapshotOptions] and [native/terminal.cc:TerminalWrap::Snapshot].
+- Arguments are checked in both layers. `createTerminal` options: [src/index.ts:normalizeCreateOptions] (before the addon loads) and [native/terminal.cc:TerminalWrap::TerminalWrap]. `resize`: [src/index.ts:Terminal] and [native/terminal.cc:TerminalWrap::Resize]. `feed`: [src/index.ts:assertFeedData] and [native/terminal.cc:TerminalWrap::Feed]. `snapshot` options: [src/index.ts:normalizeSnapshotOptions] and [native/terminal.cc:TerminalWrap::Snapshot]. `encodeMouse`: [src/index.ts:normalizeMouseOptions] and [src/index.ts:normalizeMouseEvent], and [native/terminal.cc:TerminalWrap::EncodeMouse], which also guards the UTF-8 format.
 - The two layers throw different errors for the same input. A non-object option gets an `AssertionError` from `src/` and a `TypeError` from the addon. `src/` sets no upper bound on `cols` and `rows`, and the addon throws a `RangeError` above 65535 [native/terminal.cc:PositiveUint16].
 - Both layers track disposal and throw `"GhosttyVtTerminal has been disposed"` after `dispose()`. `dispose()` is idempotent in both layers [src/index.ts:Terminal] [native/terminal.cc:TerminalWrap::DisposeNative].
 - The loader requires the addon to export the functions `createTerminal` and `getNativeInfo` [src/loader.ts:assertNativeShape]. The addon sets them in [native/terminal.cc:TerminalWrap::Init] and [native/addon.cc:InitAll].
@@ -180,7 +240,7 @@ The package has four layers:
 - Network and disk: every `npm run build:libghostty` fetches the pinned Ghostty commit, by default into `vendor/ghostty`, and installs `libghostty-vt` and `ghostty-source.json`, by default into `vendor/libghostty-vt`. `GHOSTTY_SOURCE_DIR` and `LIBGHOSTTY_VT_PREFIX` change these paths [scripts/build-libghostty-vt.sh:GHOSTTY_REPO].
 - Disk: `npm run build:native` runs `node-gyp rebuild` [package.json:scripts.build:native], and `npm run build` writes `dist/` [tsconfig.json:outDir]. `npm run build:prebuild` runs `prebuildify --napi` [package.json:scripts.build:prebuild]. `npm run assemble:prebuilds` replaces `prebuilds/` after its checks pass [scripts/assemble-prebuilds.mjs:targetRoot].
 - Remote state: the release tag script pushes `v<version>` to `origin` [scripts/create-release-tag.mjs:git]. The mise task `publish` runs `npm publish --access public --tag "$(node scripts/resolve-npm-publish-tag.mjs)"` [mise.toml:tasks.publish]. `.github/workflows/publish.yml` also creates or updates a GitHub Release, and `.github/workflows/release-changelog.yml` commits a `CHANGELOG.md` entry to the release PR branch, pushes it, and starts `ci.yml`.
-- Runtime memory: each `createTerminal` call allocates a native terminal. `dispose()` or garbage collection frees it [native/terminal.cc:TerminalWrap::~TerminalWrap].
+- Runtime memory: each `createTerminal` call allocates a native terminal and a mouse encoder. `dispose()` or garbage collection frees both [native/terminal.cc:TerminalWrap::~TerminalWrap].
 
 ## System Verification
 
