@@ -40,6 +40,57 @@ describe.each([
       .toEqual({ status: 0, signal: null, stderr: "" });
   });
 
+  it("keeps handles valid when JS runs while native code reads the arguments", () => {
+    // Native Get() runs getters, including Object.prototype getters for keys the
+    // TypeScript wrapper omits. Such JS can dispose the terminal or re-enter
+    // encodeMouse with other geometry. Run in a child: a regression can crash.
+    const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      import assert from "node:assert/strict";
+      import { createRequire } from "node:module";
+      const require = createRequire(import.meta.url);
+      const { createTerminal } = ${_name === "public"
+        ? 'await import("./dist/index.js")'
+        : 'require("node-gyp-build")(process.cwd())'};
+      const geometry = ${JSON.stringify(geometry)};
+      const others = [];
+      for (let i = 0; i < 50; i++) {
+        const term = createTerminal({ cols: 80, rows: 24 });
+        term.feed("\\x1b[?1000h\\x1b[?1006h");
+        let reads = 0;
+        Object.defineProperty(Object.prototype, "modifiers", { configurable: true, get() {
+          // The public wrapper reads it once, native code reads it next.
+          if (++reads === ${_name === "public" ? 2 : 1}) {
+            term.dispose();
+            const other = createTerminal({ cols: 80, rows: 24 });
+            other.feed("\\x1b[?1000h\\x1b[?1015h");
+            others.push(other);
+          }
+          return undefined;
+        } });
+        try {
+          assert.throws(() => term.encodeMouse({ action: "press", button: "left", x: 3, y: 3 }, { geometry }), /disposed/);
+        } finally {
+          delete Object.prototype.modifiers;
+        }
+      }
+      // A nested call with other geometry must not replace the geometry that
+      // the outer call validated its coordinates against.
+      const term = createTerminal({ cols: 80, rows: 24 });
+      term.feed("\\x1b[?1000h\\x1b[?1006h");
+      const big = { ...geometry, screenWidth: 65535 * 65536, cellWidth: 65536 };
+      const options = { geometry: big };
+      Object.defineProperty(options, "anyButtonPressed", { get() {
+        term.encodeMouse({ action: "press", button: "left", x: 1, y: 1 }, { geometry });
+        return false;
+      } });
+      const bytes = term.encodeMouse({ action: "release", button: "left", x: 2e9, y: 3 }, options);
+      assert.equal(bytes.toString("latin1"), "\\x1b[<0;30518;4m");
+      term.dispose();
+    `], { encoding: "utf8" });
+    expect({ status: child.status, signal: child.signal, stderr: child.stderr })
+      .toEqual({ status: 0, signal: null, stderr: "" });
+  });
+
   it("rejects geometry that overflows Ghostty's grid or padding arithmetic", () => {
     const term = create({ cols: 80, rows: 24 });
     try {

@@ -322,11 +322,13 @@ Napi::Value TerminalWrap::Resize(const Napi::CallbackInfo& info) {
 
 // Encode against the child-negotiated terminal state while caching geometry so
 // Ghostty's same-cell motion deduplication survives unchanged input dimensions.
+//
+// Every Get() below can run JS: a getter on the argument objects, or one on
+// Object.prototype for a key that the caller left out. That JS can dispose this
+// terminal or call encodeMouse again with other geometry. So read and validate
+// every argument first, then take the handles, and run no JS after that.
 Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
-  GhosttyTerminal terminal = RequireTerminal(env);
-  GhosttyMouseEncoder encoder = RequireMouseEncoder(env);
-  if (env.IsExceptionPending()) return env.Undefined();
   if (info.Length() != 2 || !info[0].IsObject() || !info[1].IsObject()) {
     throw Napi::TypeError::New(env, "encodeMouse expects event and options objects");
   }
@@ -357,6 +359,18 @@ Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
       MouseCoordinate(env, input.Get("x"), "mouse x", size.padding_left, size.cell_width),
       MouseCoordinate(env, input.Get("y"), "mouse y", size.padding_top, size.cell_height),
   };
+  const GhosttyMouseAction action = ParseMouseAction(env, input.Get("action"));
+  const Napi::Value button_value = input.Get("button");
+  const bool has_button = !button_value.IsUndefined();
+  const GhosttyMouseButton button =
+      has_button ? ParseMouseButton(env, button_value) : GHOSTTY_MOUSE_BUTTON_UNKNOWN;
+  const GhosttyMods mods = ParseMouseModifiers(env, input.Get("modifiers"));
+  const bool any_button_pressed = OptionBool(options, "anyButtonPressed");
+  const bool track_last_cell = OptionBool(options, "trackLastCell");
+
+  // No JS runs from here on, so the handles stay valid until we return.
+  GhosttyTerminal terminal = RequireTerminal(env);
+  GhosttyMouseEncoder encoder = RequireMouseEncoder(env);
 
   bool utf8_mouse = false;
   const GhosttyResult mode_result = ghostty_terminal_mode_get(
@@ -381,10 +395,8 @@ Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
     mouse_size_ = size;
     mouse_size_configured_ = true;
   }
-  const bool any_button_pressed = OptionBool(options, "anyButtonPressed");
   ghostty_mouse_encoder_setopt(
       encoder, GHOSTTY_MOUSE_ENCODER_OPT_ANY_BUTTON_PRESSED, &any_button_pressed);
-  const bool track_last_cell = OptionBool(options, "trackLastCell");
   ghostty_mouse_encoder_setopt(
       encoder, GHOSTTY_MOUSE_ENCODER_OPT_TRACK_LAST_CELL, &track_last_cell);
 
@@ -394,14 +406,13 @@ Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
   assert(event != nullptr);
 
   try {
-    ghostty_mouse_event_set_action(event, ParseMouseAction(env, input.Get("action")));
-    const Napi::Value button = input.Get("button");
-    if (button.IsUndefined()) {
-      ghostty_mouse_event_clear_button(event);
+    ghostty_mouse_event_set_action(event, action);
+    if (has_button) {
+      ghostty_mouse_event_set_button(event, button);
     } else {
-      ghostty_mouse_event_set_button(event, ParseMouseButton(env, button));
+      ghostty_mouse_event_clear_button(event);
     }
-    ghostty_mouse_event_set_mods(event, ParseMouseModifiers(env, input.Get("modifiers")));
+    ghostty_mouse_event_set_mods(event, mods);
     ghostty_mouse_event_set_position(event, position);
 
     size_t required = 0;
