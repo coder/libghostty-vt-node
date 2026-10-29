@@ -2,7 +2,7 @@
 
 ## Overview
 
-`native/` holds the C++ source of the Node-API addon. node-gyp builds it as the target `libghostty_vt_node` from `addon.cc`, `libghostty_vt_shim.cc`, and `terminal.cc`, with `node-addon-api`, and links it statically against `libghostty-vt` ([`binding.gyp`](../binding.gyp)). The ObjectWrap class `TerminalWrap` owns one libghostty-vt `GhosttyTerminal`. JavaScript sees it as `GhosttyVtTerminal`. The addon exports `createTerminal` and `getNativeInfo`. [`src/`](../src/README.md) loads the addon and wraps it. The shim files turn libghostty-vt result codes into error text and encode UTF-8 and hex colors.
+`native/` holds the C++ source of the Node-API addon. node-gyp builds it as the target `libghostty_vt_node` from `addon.cc`, `libghostty_vt_shim.cc`, and `terminal.cc`, with `node-addon-api`, and links it statically against `libghostty-vt` ([`binding.gyp`](../binding.gyp)). The ObjectWrap class `TerminalWrap` owns one libghostty-vt `GhosttyTerminal`. JavaScript sees it as `GhosttyVtTerminal`. The addon exports `createTerminal` and `getNativeInfo`. [`src/`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md) loads the addon and wraps it. The shim files turn libghostty-vt result codes into error text and encode UTF-8 and hex colors.
 
 ## Interface
 
@@ -69,4 +69,4 @@ C++ declarations:
 - Run (after `npm ci`): `npm run build:libghostty && npm run build:native && npm test`
 - Every native test skips when the addon does not load (`test/native-support.ts:nativeSupport`), so check the test output for skips.
 - `test/workers.test.ts` checks the per-environment state in child processes with `worker_threads`. `test/terminal.test.ts` covers `feed`, `snapshot`, `resize`, and `dispose`. No vitest test covers `formatPlain`, `formatHtml`, `includeScrollback`, the cell style fields, the typed-array errors, or the native validation messages.
-- For changes to `TerminalWrap` or `InitAll`, also run the TLA+ lifecycle model: [`.agents/skills/verify-native-lifecycle/SKILL.md`](../.agents/skills/verify-native-lifecycle/SKILL.md).
+- For changes to `TerminalWrap` or `InitAll`, also run the TLA+ lifecycle model: [`.agents/skills/verify-native-lifecycle/SKILL.md`](https://github.com/coder/libghostty-vt-node/blob/main/.agents/skills/verify-native-lifecycle/SKILL.md).

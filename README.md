@@ -146,17 +146,17 @@ The upstream API is still marked unstable by Ghostty. Keep the pinned commit upd
 
 The package has four layers:
 
-1. A consumer imports `dist/index.js`, which `tsc` compiles from [`src/`](./src/README.md). `src/index.ts` checks arguments, and `src/loader.ts` loads the native addon with `node-gyp-build` on the first API call.
+1. A consumer imports `dist/index.js`, which `tsc` compiles from [`src/`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md). `src/index.ts` checks arguments, and `src/loader.ts` loads the native addon with `node-gyp-build` on the first API call.
 2. The addon in [`native/`](./native/README.md) wraps one libghostty-vt `GhosttyTerminal` per `TerminalWrap` object and exports `createTerminal` and `getNativeInfo`.
 3. `libghostty-vt` is a static library that the addon links. `scripts/build-libghostty-vt.sh` builds it from a pinned Ghostty commit, and `binding.gyp` finds it with `scripts/resolve-libghostty-vt.mjs` (see [`scripts/`](./scripts/README.md)).
-4. The release scripts in [`scripts/`](./scripts/README.md) assemble per-platform prebuilds, tag the release, and pick the npm dist-tag. [`examples/`](./examples/README.md) holds the smoke script that the mise task `ci` runs last.
+4. The release scripts in [`scripts/`](./scripts/README.md) assemble per-platform prebuilds, tag the release, and pick the npm dist-tag. [`examples/`](https://github.com/coder/libghostty-vt-node/blob/main/examples/README.md) holds the smoke script that the mise task `ci` runs last.
 
 ## Subdirectories & System Boundaries
 
-- `src`: [`./src/README.md`](./src/README.md) - TypeScript package API (`createTerminal`, `getNativeInfo`, and the snapshot types), argument checks, disposal tracking, and the lazy, cached addon loader.
+- `src`: [`src/README.md`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md) - TypeScript package API (`createTerminal`, `getNativeInfo`, and the snapshot types), argument checks, disposal tracking, and the lazy, cached addon loader.
 - `native`: [`./native/README.md`](./native/README.md) - Node-API C++ addon (`TerminalWrap`, JavaScript class `GhosttyVtTerminal`) over the libghostty-vt C API, with per-environment class state for `worker_threads`.
 - `scripts`: [`./scripts/README.md`](./scripts/README.md) - libghostty-vt build and path resolver, prebuild assembly and check, release tag creation, and npm dist-tag choice.
-- `examples`: [`./examples/README.md`](./examples/README.md) - `smoke.ts`, run by `npm run smoke`.
+- `examples`: [`examples/README.md`](https://github.com/coder/libghostty-vt-node/blob/main/examples/README.md) - `smoke.ts`, run by `npm run smoke`.
 - `test` (no contract): vitest suites for the loader, the terminal API, and `worker_threads` loading.
 - `dogfood` (no contract): a plain-text proof bundle from the repository bootstrap.
 
@@ -184,5 +184,5 @@ The package has four layers:
 
 - Run: `mise run ci`
 - `.github/workflows/ci.yml` runs the same task. Without mise, run the steps in "Native Build" above.
-- Packaged-install journeys: [`.agents/skills/verify-libghostty-vt-node/SKILL.md`](./.agents/skills/verify-libghostty-vt-node/SKILL.md)
-- TLA+ model of the native lifecycle: [`.agents/skills/verify-native-lifecycle/SKILL.md`](./.agents/skills/verify-native-lifecycle/SKILL.md)
+- Packaged-install journeys: [`.agents/skills/verify-libghostty-vt-node/SKILL.md`](https://github.com/coder/libghostty-vt-node/blob/main/.agents/skills/verify-libghostty-vt-node/SKILL.md)
+- TLA+ model of the native lifecycle: [`.agents/skills/verify-native-lifecycle/SKILL.md`](https://github.com/coder/libghostty-vt-node/blob/main/.agents/skills/verify-native-lifecycle/SKILL.md)
