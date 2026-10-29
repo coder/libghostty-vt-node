@@ -1,0 +1,55 @@
+# scripts
+
+## Overview
+
+`scripts/` holds the build and release helpers. `build-libghostty-vt.sh` clones Ghostty at a pinned commit and builds the static `libghostty-vt` library and header with Zig. [`binding.gyp`](../binding.gyp) calls `resolve-libghostty-vt.mjs` to find that header and library when it builds [`native/`](../native/README.md). The other four Node ES module scripts do release work: they assemble per-platform prebuilds into `prebuilds/`, load an addon through `dist/index.js` as a check, create and push the `v<version>` Git tag, and pick the npm dist-tag. None of them export functions.
+
+## Interface
+
+| Script | Invoked by | Inputs | Output |
+| --- | --- | --- | --- |
+| `build-libghostty-vt.sh` | `npm run build:libghostty` (mise tasks `ci` and `release-prebuilds`) | env `GHOSTTY_REPO`, `GHOSTTY_COMMIT`, `GHOSTTY_SOURCE_DIR` (default `vendor/ghostty`), `LIBGHOSTTY_VT_PREFIX` (default `vendor/libghostty-vt`), `LIBGHOSTTY_VT_SIMD` (default `false`), `LIBGHOSTTY_VT_OPTIMIZE` (default `ReleaseFast`) | progress on stdout, errors on stderr. Exit 0 on success. Its own checks exit 1. Under `set -euo pipefail`, a failed `mkdir` or `git` command exits with that command's status [scripts/build-libghostty-vt.sh:need] |
+| `resolve-libghostty-vt.mjs` | `binding.gyp` `include_dirs` and `libraries` | argv `include` or `library`. Env `LIBGHOSTTY_VT_PREFIX` (default `vendor/libghostty-vt`), `LIBGHOSTTY_VT_INCLUDE_DIR` (default `<prefix>/include`), `LIBGHOSTTY_VT_STATIC_LIB`, then `LIBGHOSTTY_VT_LIB` (default `<prefix>/lib/libghostty-vt.a`, `ghostty-vt-static.lib` on win32) | the absolute path on stdout, with no trailing newline [scripts/resolve-libghostty-vt.mjs:libraryPath] |
+| `assemble-prebuilds.mjs` | `npm run assemble:prebuilds` (mise task `assemble-prebuilds`, run by `publish-dry-run` and `publish`) | argv[2] source (default `.release-artifacts`), argv[3] target (default `prebuilds`), env `EXPECTED_PREBUILD_PLATFORMS` (default `darwin-arm64,linux-arm64,linux-x64`) | JSON `{ sourceRoot, targetRoot, platforms }` on stdout [scripts/assemble-prebuilds.mjs:expectedPlatforms] |
+| `verify-prebuilds.mjs` | `npm run verify:prebuilds` (mise tasks `release-prebuilds`, `publish-dry-run`, and `publish`) | `prebuilds/` and `dist/index.js` (run `npm run build` first) | JSON `{ platforms, nativeInfo }` on stdout [scripts/verify-prebuilds.mjs:platforms] |
+| `create-release-tag.mjs` | `npm run release:create-tag` (mise task `create-release-tag`, run by `.github/workflows/publish.yml`) | `package.json` `version`, env `RELEASE_BRANCH_NAME` (optional), `RELEASE_TARGET_SHA` (default `git rev-parse HEAD`) | JSON `{ tagName, targetSha, created }` on stdout [scripts/create-release-tag.mjs:releaseTargetSha] |
+| `resolve-npm-publish-tag.mjs` | `npm run resolve:publish-tag` (mise tasks `publish-dry-run` and `publish`), and directly in `.github/workflows/publish.yml` and in the `publish` task's `npm publish --tag` | `package.json` `version`, env `NPM_PUBLISH_TAG`, `GITHUB_REF_TYPE`, `GITHUB_REF_NAME` | one dist-tag and a newline on stdout [scripts/resolve-npm-publish-tag.mjs:printTag] |
+
+In the `.mjs` scripts, a failed `assert` or a thrown `Error` ends the process with a non-zero exit code.
+
+## Invariants
+
+- The default Ghostty commit is `48ccec182a932c2ec04c344d45a5fc553861cb13`. `GHOSTTY_COMMIT` overrides it [scripts/build-libghostty-vt.sh:GHOSTTY_COMMIT].
+- `build-libghostty-vt.sh` exits 1 with `"error: missing required command '<cmd>'"` and `"Install it first, then rerun npm run build:libghostty."` when `git` or `zig` is not on `PATH`. For `zig` it also prints `"This Ghostty commit requires Zig 0.15.2. With mise: mise install"` [scripts/build-libghostty-vt.sh:need].
+- `build-libghostty-vt.sh` exits 1 when `zig version` differs from `minimum_zig_version` in Ghostty's `build.zig.zon`. It skips this check when that file names no version [scripts/build-libghostty-vt.sh:required_zig].
+- `build-libghostty-vt.sh` runs `zig build -Demit-lib-vt=true -Dsimd=$SIMD -Doptimize=$OPTIMIZE --prefix $PREFIX install`, with `--sysroot <xcrun --show-sdk-path>` on Darwin when `xcrun` returns a path. A failed build exits 1 [scripts/build-libghostty-vt.sh:zig_args].
+- After the build, `$PREFIX/include/ghostty/vt.h` and `$PREFIX/lib/libghostty-vt.a` must exist. Otherwise the script exits 1 [scripts/build-libghostty-vt.sh:header].
+- `resolve-libghostty-vt.mjs` exits 2 with `"usage: resolve-libghostty-vt.mjs <include|library>"` for any other argument [scripts/resolve-libghostty-vt.mjs:command]. It exits 1 when `<includeDir>/ghostty/vt.h` or the static library is missing, and prints the setup steps and the paths it checked [scripts/resolve-libghostty-vt.mjs:fail].
+- `resolve-libghostty-vt.mjs` uses `??` for its defaults, so an environment variable set to an empty string does not fall back. `resolve("")` gives the working directory. Relative values resolve against the working directory, not the repository root [scripts/resolve-libghostty-vt.mjs:prefix].
+- `assemble-prebuilds.mjs` asserts that the source and target differ and that the expected platform list is not empty [scripts/assemble-prebuilds.mjs:expectedPlatforms]. The source must be a directory that holds at least one `prebuilds-*` directory, and each platform directory must contain a `.node` file. Duplicate platforms fail, and every expected platform must be present. Platforms outside the expected list are copied without an error [scripts/assemble-prebuilds.mjs:hasNodeAddon]. Relative argv paths resolve against the working directory [scripts/assemble-prebuilds.mjs:sourceRoot].
+- `verify-prebuilds.mjs` throws when `prebuilds/` cannot be read or has no platform subdirectories [scripts/verify-prebuilds.mjs:prebuildsDir]. Code defect: its first error text says `npm run prebuild`, but `package.json` defines `build:prebuild` and no `prebuild` script. Tracked in [#28](https://github.com/coder/libghostty-vt-node/issues/28) [package.json:scripts.build:prebuild].
+- Code defect: `verify-prebuilds.mjs` does not prove that a prebuild loads. `node-gyp-build` tries `build/Release` before `prebuilds/` unless `PREBUILDS_ONLY` is set, and `prebuildify` leaves an addon in `build/Release`. In `mise run release-prebuilds`, the check can pass on that local build. The script also loads only the current platform's addon. Tracked in [#28](https://github.com/coder/libghostty-vt-node/issues/28) [scripts/verify-prebuilds.mjs:info].
+- `create-release-tag.mjs` asserts that `version` matches `semverPattern`, and the tag is `v<version>` [scripts/create-release-tag.mjs:semverPattern]. The pattern is looser than SemVer 2.0.0: it accepts numeric prerelease identifiers with leading zeros (`1.0.0-01`) and empty build identifiers (`1.0.0+foo..bar`). Tracked in [#28](https://github.com/coder/libghostty-vt-node/issues/28). A set, non-empty `RELEASE_BRANCH_NAME` must equal `release/v<version>` [scripts/create-release-tag.mjs:releaseBranchName]. The trimmed target SHA must be 40 hex characters and must equal the checked-out `HEAD` [scripts/create-release-tag.mjs:releaseTargetSha].
+- When the remote tag already exists, `create-release-tag.mjs` asserts that its ref is `refs/tags/v<version>` and that it points at the target SHA, prints `created: false`, and exits 0 without tagging [scripts/create-release-tag.mjs:remoteTagSha]. `tryGit` turns every `git ls-remote` failure, network and auth errors included, into "tag absent", so the script goes on to tag and push [scripts/create-release-tag.mjs:tryGit].
+- `resolve-npm-publish-tag.mjs` asserts that `version` matches its own `semverPattern`, which is as loose as the one in `create-release-tag.mjs`. When `GITHUB_REF_TYPE` is `tag`, `GITHUB_REF_NAME` must be a string equal to `v<version>`. This check runs before the `NPM_PUBLISH_TAG` override [scripts/resolve-npm-publish-tag.mjs:semverPattern].
+- Dist-tag rule: `NPM_PUBLISH_TAG` is trimmed. A non-empty result must match `/^[A-Za-z][A-Za-z0-9._-]*$/` and is printed. Otherwise a version with no prerelease prints `latest`. Otherwise the first dot-separated prerelease identifier must match the same pattern and is printed in lower case, for example `beta` for `0.1.0-beta.1`. A version such as `1.0.0-1` fails with `"invalid prerelease channel for npm dist-tag: 1"` [scripts/resolve-npm-publish-tag.mjs:prerelease].
+
+## Side Effects
+
+- `build-libghostty-vt.sh` creates the parent of `GHOSTTY_SOURCE_DIR` and the `PREFIX` directory with `mkdir -p` [scripts/build-libghostty-vt.sh:PREFIX].
+- Network: when `$GHOSTTY_SOURCE_DIR/.git` is missing, `build-libghostty-vt.sh` runs `git clone $GHOSTTY_REPO` (default `https://github.com/ghostty-org/ghostty.git`). Every run then runs `git fetch --depth 1 origin <commit>` and `git checkout --detach <commit>` in that directory, so every run needs the network [scripts/build-libghostty-vt.sh:GHOSTTY_REPO].
+- `build-libghostty-vt.sh` runs `zig build ... install` into `PREFIX` [scripts/build-libghostty-vt.sh:zig_args] and writes `$PREFIX/ghostty-source.json` with the repository, commit, Zig version, SIMD, and optimize values [scripts/build-libghostty-vt.sh:ghostty-source.json].
+- `assemble-prebuilds.mjs` deletes the target directory (default `prebuilds/`) with `rmSync({ recursive: true, force: true })`, recreates it, and copies each `<source>/prebuilds-*/<platform>` directory into it with `errorOnExist: true`. The delete runs before the per-platform checks, so a failed run leaves the target empty or incomplete [scripts/assemble-prebuilds.mjs:targetRoot].
+- `verify-prebuilds.mjs` imports `../dist/index.js` and calls `getNativeInfo()`, which loads the native addon [scripts/verify-prebuilds.mjs:info].
+- Network and remote state: `create-release-tag.mjs` runs `git ls-remote --tags origin`. When the tag is absent, it runs `git tag v<version> <sha>` and `git push origin refs/tags/v<version>` [scripts/create-release-tag.mjs:git].
+- `resolve-libghostty-vt.mjs` and `resolve-npm-publish-tag.mjs` read files and environment variables and write only to stdout and stderr [scripts/resolve-libghostty-vt.mjs:fail] [scripts/resolve-npm-publish-tag.mjs:printTag].
+- Private helpers: `assertDirectory` and `listDirectories` in `assemble-prebuilds.mjs`, and `git` (which asserts an array of string arguments) in `create-release-tag.mjs` [scripts/assemble-prebuilds.mjs:listDirectories] [scripts/create-release-tag.mjs:git].
+
+## Verification
+
+- No unit tests cover `scripts/`. The commands that run each script are the check. `mise run release-prebuilds` and `mise run publish-dry-run` start with `npm ci`, which reinstalls `node_modules/`.
+- Build scripts: `npm run build:libghostty && npm run build:native`
+- Prebuild check: `mise run release-prebuilds`
+- Prebuild assembly: `mise run publish-dry-run`. It needs `.release-artifacts/prebuilds-*` directories, which CI downloads in `.github/workflows/publish.yml`.
+- Dist-tag rule: `npm run resolve:publish-tag` (prints `beta` for version `0.1.0-beta.1`)
+- CAUTION: Do not run `npm run release:create-tag` to test it. It creates the `v<version>` tag and pushes it to `origin`.
