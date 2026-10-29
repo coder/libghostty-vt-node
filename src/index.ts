@@ -118,34 +118,36 @@ function optionalBoolean(name: string, value: unknown): boolean {
 // that Ghostty's mouse event model can represent.
 function normalizeMouseEvent(event: MouseInputEvent, geometry: MouseGeometry): MouseInputEvent {
   assertObject("mouse event", event);
-  if (!mouseActions.has(event.action)) throw new TypeError("mouse action is invalid");
-  if (event.button !== undefined && !mouseButtons.has(event.button)) {
+  const { action, button, x, y, modifiers } = event;
+  if (!mouseActions.has(action)) throw new TypeError("mouse action is invalid");
+  if (button !== undefined && !mouseButtons.has(button)) {
     throw new TypeError("mouse button is invalid");
   }
-  if (event.action !== "motion" && event.button === undefined) {
-    throw new TypeError(`${event.action} mouse event requires a button`);
+  if (action !== "motion" && button === undefined) {
+    throw new TypeError(`${action} mouse event requires a button`);
   }
-  assertFiniteNumber("mouse x", event.x);
-  assertFiniteNumber("mouse y", event.y);
-  assertMouseCoordinate("mouse x", event.x, geometry.paddingLeft ?? 0, geometry.cellWidth);
-  assertMouseCoordinate("mouse y", event.y, geometry.paddingTop ?? 0, geometry.cellHeight);
+  assertFiniteNumber("mouse x", x);
+  assertFiniteNumber("mouse y", y);
+  assertMouseCoordinate("mouse x", x, geometry.paddingLeft ?? 0, geometry.cellWidth);
+  assertMouseCoordinate("mouse y", y, geometry.paddingTop ?? 0, geometry.cellHeight);
 
-  let modifiers: MouseModifiers | undefined;
-  if (event.modifiers !== undefined) {
-    assertObject("mouse modifiers", event.modifiers);
-    modifiers = {
-      shift: optionalBoolean("mouse modifiers.shift", event.modifiers.shift),
-      ctrl: optionalBoolean("mouse modifiers.ctrl", event.modifiers.ctrl),
-      alt: optionalBoolean("mouse modifiers.alt", event.modifiers.alt),
+  let normalizedModifiers: MouseModifiers | undefined;
+  if (modifiers !== undefined) {
+    assertObject("mouse modifiers", modifiers);
+    const { shift, ctrl, alt } = modifiers;
+    normalizedModifiers = {
+      shift: optionalBoolean("mouse modifiers.shift", shift),
+      ctrl: optionalBoolean("mouse modifiers.ctrl", ctrl),
+      alt: optionalBoolean("mouse modifiers.alt", alt),
     };
   }
 
   return {
-    action: event.action,
-    ...(event.button === undefined ? {} : { button: event.button }),
-    x: event.x,
-    y: event.y,
-    ...(modifiers === undefined ? {} : { modifiers }),
+    action,
+    ...(button === undefined ? {} : { button }),
+    x,
+    y,
+    ...(normalizedModifiers === undefined ? {} : { modifiers: normalizedModifiers }),
   };
 }
 
@@ -168,36 +170,42 @@ function assertMouseAxis(name: string, screen: number, cell: number, padding: nu
 // cell-based and pixel-based terminal protocols.
 function normalizeMouseOptions(options: MouseEncoderOptions): MouseEncoderOptions {
   assertObject("mouse encoder options", options);
-  assertObject("mouse geometry", options.geometry);
-  const geometry = options.geometry;
-  assertPositiveInteger("mouse geometry.screenWidth", geometry.screenWidth);
-  assertPositiveInteger("mouse geometry.screenHeight", geometry.screenHeight);
-  assertPositiveInteger("mouse geometry.cellWidth", geometry.cellWidth);
-  assertPositiveInteger("mouse geometry.cellHeight", geometry.cellHeight);
-
-  const normalizedGeometry: MouseGeometry = {
-    screenWidth: geometry.screenWidth,
-    screenHeight: geometry.screenHeight,
-    cellWidth: geometry.cellWidth,
-    cellHeight: geometry.cellHeight,
-  };
-  for (const key of ["paddingTop", "paddingBottom", "paddingRight", "paddingLeft"] as const) {
-    const value = geometry[key];
+  const { geometry, anyButtonPressed, trackLastCell } = options;
+  assertObject("mouse geometry", geometry);
+  const {
+    screenWidth, screenHeight, cellWidth, cellHeight,
+    paddingTop, paddingBottom, paddingRight, paddingLeft,
+  } = geometry;
+  assertPositiveInteger("mouse geometry.screenWidth", screenWidth);
+  assertPositiveInteger("mouse geometry.screenHeight", screenHeight);
+  assertPositiveInteger("mouse geometry.cellWidth", cellWidth);
+  assertPositiveInteger("mouse geometry.cellHeight", cellHeight);
+  for (const [key, value] of Object.entries({ paddingTop, paddingBottom, paddingRight, paddingLeft })) {
     if (value !== undefined) assertNonNegativeInteger(`mouse geometry.${key}`, value);
-    normalizedGeometry[key] = value ?? 0;
   }
+
+  const normalizedGeometry = {
+    screenWidth,
+    screenHeight,
+    cellWidth,
+    cellHeight,
+    paddingTop: paddingTop ?? 0,
+    paddingBottom: paddingBottom ?? 0,
+    paddingRight: paddingRight ?? 0,
+    paddingLeft: paddingLeft ?? 0,
+  };
   for (const [key, value] of Object.entries(normalizedGeometry)) {
     if (value > 0xffffffff) throw new RangeError(`mouse geometry.${key} exceeds the 32-bit limit`);
   }
-  assertMouseAxis("screenWidth", geometry.screenWidth, geometry.cellWidth,
-    normalizedGeometry.paddingLeft! + normalizedGeometry.paddingRight!);
-  assertMouseAxis("screenHeight", geometry.screenHeight, geometry.cellHeight,
-    normalizedGeometry.paddingTop! + normalizedGeometry.paddingBottom!);
+  assertMouseAxis("screenWidth", screenWidth, cellWidth,
+    normalizedGeometry.paddingLeft + normalizedGeometry.paddingRight);
+  assertMouseAxis("screenHeight", screenHeight, cellHeight,
+    normalizedGeometry.paddingTop + normalizedGeometry.paddingBottom);
 
   return {
     geometry: normalizedGeometry,
-    anyButtonPressed: optionalBoolean("anyButtonPressed", options.anyButtonPressed),
-    trackLastCell: optionalBoolean("trackLastCell", options.trackLastCell),
+    anyButtonPressed: optionalBoolean("anyButtonPressed", anyButtonPressed),
+    trackLastCell: optionalBoolean("trackLastCell", trackLastCell),
   };
 }
 
