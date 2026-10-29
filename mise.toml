@@ -1,6 +1,6 @@
 [tools]
 communique = "1.0.3"
-node = "25.9"
+node = "26.12.1"
 zig = "0.15.2"
 
 [tasks.ci]
@@ -10,6 +10,18 @@ run = [
   "npm run build:libghostty",
   "npm run build:native",
   "npm run build",
+  "npm test",
+  "npm run smoke",
+]
+
+[tasks.ci-ubsan]
+description = "Build the native addon with UBSan, then run tests and smoke so undefined behavior aborts the run."
+run = [
+  "npm ci",
+  "npm run build:libghostty",
+  # GCC's "undefined" group leaves out float-cast-overflow.
+  "CXXFLAGS=\"-fsanitize=undefined,float-cast-overflow -fno-sanitize-recover=all\" LDFLAGS=\"-fsanitize=undefined,float-cast-overflow\" npm run build:native",
+  "nm -u $(find build/Release -name '*.o') | grep -c '__ubsan_handle_.*_abort' > /dev/null || { echo \"error: the addon was built without UBSan\" >&2; exit 1; }",
   "npm test",
   "npm run smoke",
 ]

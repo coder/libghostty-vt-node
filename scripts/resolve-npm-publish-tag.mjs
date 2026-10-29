@@ -10,8 +10,9 @@ const version = packageJson.version;
 const explicitTag = process.env.NPM_PUBLISH_TAG?.trim();
 const githubRefType = process.env.GITHUB_REF_TYPE;
 const githubRefName = process.env.GITHUB_REF_NAME;
+// SemVer 2.0.0 (semver.org): no leading zeros in numeric identifiers, no empty identifiers.
 const semverPattern =
-  /^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z.-]+)?$/;
+  /^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?$/;
 const distTagPattern = /^[A-Za-z][A-Za-z0-9._-]*$/;
 
 function printTag(tag) {
