@@ -33,8 +33,12 @@ describeIfNative.each([
       const term = createTerminal({ cols: 80, rows: 24 });
       term.feed("\\x1b[?1000h\\x1b[?1005h");
       const options = { geometry: ${JSON.stringify({ ...geometry, screenWidth: 65535, screenHeight: 65535 })} };
-      for (const [x, y] of [[55263, 0], [0, 55263], [57310, 0], [0, 65503]]) {
+      for (const [x, y] of [[55263, 0], [0, 55263], [57310, 0]]) {
         assert.throws(() => term.encodeMouse({ action: "press", button: "left", x, y }, options), RangeError);
+      }
+      for (const [y, row] of [[65503, "\\xf0\\x90\\x80\\x80"], [65534, "\\xf0\\x90\\x80\\x9f"]]) {
+        assert.deepEqual(term.encodeMouse({ action: "press", button: "left", x: 0, y }, options),
+          Buffer.from("\\x1b[M\\x20\\x21" + row, "latin1"));
       }
       // Clamping happens before UTF-8 conversion: a distant release on a small
       // viewport is safe even when the original coordinate was problematic.
