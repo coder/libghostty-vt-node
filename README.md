@@ -207,22 +207,22 @@ The upstream API is still marked unstable by Ghostty. Keep the pinned commit upd
 The package has four layers:
 
 1. A consumer imports `dist/index.js`, which `tsc` compiles from [`src/`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md). `src/index.ts` checks arguments, and `src/loader.ts` loads the native addon with `node-gyp-build` on the first API call.
-2. The addon in [`native/`](./native/README.md) wraps one libghostty-vt `GhosttyTerminal` per `TerminalWrap` object and exports `createTerminal` and `getNativeInfo`.
+2. The addon in [`native/`](./native/README.md) wraps one libghostty-vt `GhosttyTerminal` and one `GhosttyMouseEncoder` per `TerminalWrap` object and exports `createTerminal` and `getNativeInfo`.
 3. `libghostty-vt` is a static library that the addon links. `scripts/build-libghostty-vt.sh` builds it from a pinned Ghostty commit, and `binding.gyp` finds it with `scripts/resolve-libghostty-vt.mjs` (see [`scripts/`](./scripts/README.md)).
 4. The release scripts in [`scripts/`](./scripts/README.md) assemble per-platform prebuilds, tag the release, and pick the npm dist-tag. [`examples/`](https://github.com/coder/libghostty-vt-node/blob/main/examples/README.md) holds the smoke script that the mise task `ci` runs last.
 
 ## Subdirectories & System Boundaries
 
-- `src`: [`src/README.md`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md) - TypeScript package API (`createTerminal`, `getNativeInfo`, and the snapshot types), argument checks, disposal tracking, and the lazy, cached addon loader.
+- `src`: [`src/README.md`](https://github.com/coder/libghostty-vt-node/blob/main/src/README.md) - TypeScript package API (`createTerminal`, `getNativeInfo`, `supportsMouseInput`, and the snapshot and mouse types), argument checks, disposal tracking, and the lazy, cached addon loader.
 - `native`: [`./native/README.md`](./native/README.md) - Node-API C++ addon (`TerminalWrap`, JavaScript class `GhosttyVtTerminal`) over the libghostty-vt C API, with per-environment class state for `worker_threads`.
 - `scripts`: [`./scripts/README.md`](./scripts/README.md) - libghostty-vt build and path resolver, prebuild assembly and check, release tag creation, and npm dist-tag choice.
 - `examples`: [`examples/README.md`](https://github.com/coder/libghostty-vt-node/blob/main/examples/README.md) - `smoke.ts`, run by `npm run smoke`.
-- `test` (no contract): vitest suites for the loader, the terminal API, and `worker_threads` loading.
+- `test` (no contract): vitest suites for the loader, the terminal API, the `encodeMouse` limits, and `worker_threads` loading.
 - `dogfood` (no contract): a plain-text proof bundle from the repository bootstrap.
 
 ## Global Invariants
 
-- Arguments are checked in both layers. `createTerminal` options: [src/index.ts:normalizeCreateOptions] (before the addon loads) and [native/terminal.cc:TerminalWrap::TerminalWrap]. `resize`: [src/index.ts:Terminal] and [native/terminal.cc:TerminalWrap::Resize]. `feed`: [src/index.ts:assertFeedData] and [native/terminal.cc:TerminalWrap::Feed]. `snapshot` options: [src/index.ts:normalizeSnapshotOptions] and [native/terminal.cc:TerminalWrap::Snapshot].
+- Arguments are checked in both layers. `createTerminal` options: [src/index.ts:normalizeCreateOptions] (before the addon loads) and [native/terminal.cc:TerminalWrap::TerminalWrap]. `resize`: [src/index.ts:Terminal] and [native/terminal.cc:TerminalWrap::Resize]. `feed`: [src/index.ts:assertFeedData] and [native/terminal.cc:TerminalWrap::Feed]. `snapshot` options: [src/index.ts:normalizeSnapshotOptions] and [native/terminal.cc:TerminalWrap::Snapshot]. `encodeMouse`: [src/index.ts:normalizeMouseOptions] and [src/index.ts:normalizeMouseEvent], and [native/terminal.cc:TerminalWrap::EncodeMouse], which also guards the UTF-8 format.
 - The two layers throw different errors for the same input. A non-object option gets an `AssertionError` from `src/` and a `TypeError` from the addon. `src/` sets no upper bound on `cols` and `rows`, and the addon throws a `RangeError` above 65535 [native/terminal.cc:PositiveUint16].
 - Both layers track disposal and throw `"GhosttyVtTerminal has been disposed"` after `dispose()`. `dispose()` is idempotent in both layers [src/index.ts:Terminal] [native/terminal.cc:TerminalWrap::DisposeNative].
 - The loader requires the addon to export the functions `createTerminal` and `getNativeInfo` [src/loader.ts:assertNativeShape]. The addon sets them in [native/terminal.cc:TerminalWrap::Init] and [native/addon.cc:InitAll].
@@ -238,7 +238,7 @@ The package has four layers:
 - Network and disk: every `npm run build:libghostty` fetches the pinned Ghostty commit, by default into `vendor/ghostty`, and installs `libghostty-vt` and `ghostty-source.json`, by default into `vendor/libghostty-vt`. `GHOSTTY_SOURCE_DIR` and `LIBGHOSTTY_VT_PREFIX` change these paths [scripts/build-libghostty-vt.sh:GHOSTTY_REPO].
 - Disk: `npm run build:native` runs `node-gyp rebuild` [package.json:scripts.build:native], and `npm run build` writes `dist/` [tsconfig.json:outDir]. `npm run build:prebuild` runs `prebuildify --napi` [package.json:scripts.build:prebuild]. `npm run assemble:prebuilds` deletes and rebuilds `prebuilds/` [scripts/assemble-prebuilds.mjs:targetRoot].
 - Remote state: the release tag script pushes `v<version>` to `origin` [scripts/create-release-tag.mjs:git]. The mise task `publish` runs `npm publish --access public --tag "$(node scripts/resolve-npm-publish-tag.mjs)"` [mise.toml:tasks.publish]. `.github/workflows/publish.yml` also creates or updates a GitHub Release, and `.github/workflows/release-changelog.yml` commits a `CHANGELOG.md` entry to the release PR branch, pushes it, and starts `ci.yml`.
-- Runtime memory: each `createTerminal` call allocates a native terminal. `dispose()` or garbage collection frees it [native/terminal.cc:TerminalWrap::~TerminalWrap].
+- Runtime memory: each `createTerminal` call allocates a native terminal and a mouse encoder. `dispose()` or garbage collection frees both [native/terminal.cc:TerminalWrap::~TerminalWrap].
 
 ## System Verification
 
