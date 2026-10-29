@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <limits>
 #include <stdexcept>
 
@@ -13,11 +14,15 @@ uint16_t PositiveUint16(Napi::Env env, const Napi::Value& value, const char* nam
     throw Napi::TypeError::New(env, std::string(name) + " must be a positive integer");
   }
   const double number = value.As<Napi::Number>().DoubleValue();
-  if (number <= 0 || number != static_cast<uint32_t>(number) ||
-      number > std::numeric_limits<uint16_t>::max()) {
+  // Range-check before the cast: casting NaN, an infinity, or a value that
+  // uint16_t cannot hold is undefined behavior.
+  if (!std::isfinite(number) || number < 1 || number > std::numeric_limits<uint16_t>::max() ||
+      number != std::trunc(number)) {
     throw Napi::RangeError::New(env, std::string(name) + " must be a positive 16-bit integer");
   }
-  return static_cast<uint16_t>(number);
+  const uint16_t result = static_cast<uint16_t>(number);
+  assert(static_cast<double>(result) == number);
+  return result;
 }
 
 size_t NonNegativeSize(Napi::Env env, const Napi::Value& value, const char* name) {
@@ -25,10 +30,15 @@ size_t NonNegativeSize(Napi::Env env, const Napi::Value& value, const char* name
     throw Napi::TypeError::New(env, std::string(name) + " must be a non-negative integer");
   }
   const double number = value.As<Napi::Number>().DoubleValue();
-  if (number < 0 || number != static_cast<uint64_t>(number)) {
+  // 2^64 on 64-bit targets: every double below it fits in size_t.
+  constexpr double kSizeLimit = static_cast<double>(std::numeric_limits<size_t>::max()) + 1.0;
+  // Range-check before the cast, as in PositiveUint16.
+  if (!std::isfinite(number) || number < 0 || number >= kSizeLimit || number != std::trunc(number)) {
     throw Napi::RangeError::New(env, std::string(name) + " must be a non-negative integer");
   }
-  return static_cast<size_t>(number);
+  const size_t result = static_cast<size_t>(number);
+  assert(static_cast<double>(result) == number);
+  return result;
 }
 
 bool OptionBool(const Napi::Object& options, const char* name) {
