@@ -44,7 +44,7 @@ function hasChangelogEntry(tagName) {
   const version = tagName.replace(/^v/, "");
   const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const escapedTag = tagName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const entryPattern = new RegExp(String.raw`^##\s+(?:\[?(?:${escapedVersion}|${escapedTag})\]?)(?:\s|$)`, "m");
+  const entryPattern = new RegExp(String.raw`^##\s+\[?(?:${escapedVersion}|${escapedTag})\]?(?:\(|\s|$)`, "m");
   return entryPattern.test(changelog);
 }
 
