@@ -1,7 +1,7 @@
 [tools]
 communique = "1.0.3"
 node = "26.12.1"
-zig = "0.15.2"
+zig = "0.17.0"
 
 [tasks.ci]
 description = "Install dependencies, build libghostty-vt/native/TypeScript, run tests, and run smoke."

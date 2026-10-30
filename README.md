@@ -16,6 +16,8 @@ This bootstrap was written against:
 - libghostty Doxygen: <https://libghostty.tip.ghostty.org/>
 - Node-API docs: <https://nodejs.org/api/n-api.html>
 
+The build now pins Ghostty `v1.4.0` (`83fb95624b0439ee660c2679b43b38c8b63769cd`), which needs Zig 0.17.0.
+
 The binding talks to `libghostty-vt` directly through the C API. It has no runtime dependency on `go-libghostty`.
 
 ## API
@@ -62,8 +64,6 @@ The public contract is intentionally small:
 All dimensions are validated as positive integers. Using a terminal after `dispose()` throws.
 
 `snapshot()` reports the cursor position (`cursorRow`, `cursorCol`) and its DECTCEM visibility (`cursorVisible`, toggled by `ESC[?25h` and `ESC[?25l`). With `includeCells: true`, each cell reports its text, width, optional `foreground` and `background` colors, and these SGR attributes: `bold`, `faint`, `italic`, `underline`, `inverse`, `invisible`, and `strikethrough`. An attribute is present only when it is set. `inverse` is the raw SGR 7 flag: `foreground` and `background` are not swapped, so consumers apply reverse video with their own default colors.
-
-The pinned Ghostty ignores the DECSTR soft reset (`ESC[!p`). After it, a hidden cursor stays hidden and SGR attributes stay set. Programs that reset with `ESC c` (RIS) are unaffected.
 
 ### Mouse encoding
 
@@ -191,7 +191,7 @@ Manual dispatch and direct `v*.*.*` tag pushes are available for recovery, but m
 
 The native layer currently uses these verified `libghostty-vt` C APIs:
 
-- terminal lifecycle and stream processing: `ghostty_terminal_new`, `ghostty_terminal_vt_write`, `ghostty_terminal_resize`, `ghostty_terminal_free`
+- terminal lifecycle and stream processing: `ghostty_terminal_new`, `ghostty_terminal_set`, `ghostty_terminal_vt_write`, `ghostty_terminal_resize`, `ghostty_terminal_free`
 - metadata and state: `ghostty_terminal_get`, `ghostty_build_info`
 - mode-aware mouse input: `ghostty_mouse_encoder_*`, `ghostty_mouse_event_*`
 - plain/HTML debug formatting: `ghostty_formatter_terminal_new`, `ghostty_formatter_format_alloc`

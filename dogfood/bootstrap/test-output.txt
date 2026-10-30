@@ -1,13 +1,20 @@
+$ npm test
 
-> @coder/libghostty-vt-node@0.1.0 test
+> @coder/libghostty-vt-node@0.1.0-beta.1 test
 > vitest run
 
 
- RUN  v4.1.5 /Users/thomask33/Projects/libghostty-vt-node
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/home/coder/.mux/src/libghostty-vt-node/tough-seals-think[39m
 
+ [32m✓[39m test/load.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m test/terminal.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m test/workers.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m test/mouse-safety.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 309[2mms[22m[39m
+ [32m✓[39m test/scripts.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 952[2mms[22m[39m
 
- Test Files  2 passed (2)
-      Tests  2 passed | 4 skipped (6)
-   Start at  16:06:17
-   Duration  137ms (transform 62ms, setup 0ms, import 89ms, tests 4ms, environment 0ms)
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m73 passed[39m[22m[90m (73)[39m
+[2m   Start at [22m 01:39:39
+[2m   Duration [22m 1.08s[2m (transform 95ms, setup 0ms, import 205ms, tests 1.45s, environment 0ms)[22m
 
+exit=0

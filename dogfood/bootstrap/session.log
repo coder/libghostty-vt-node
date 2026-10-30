@@ -1,41 +1,203 @@
-^D
-> @coder/libghostty-vt-node@0.1.0 test
+$ npm install
+
+> @coder/libghostty-vt-node@0.1.0-beta.1 install
+> node -e "console.log('native build is explicit: run npm run build:native')"
+
+native build is explicit: run npm run build:native
+
+up to date, audited 93 packages in 491ms
+
+22 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+exit=0
+$ npm run build
+
+> @coder/libghostty-vt-node@0.1.0-beta.1 build
+> tsc -p tsconfig.json
+
+exit=0
+$ npm run build:libghostty
+
+> @coder/libghostty-vt-node@0.1.0-beta.1 build:libghostty
+> scripts/build-libghostty-vt.sh
+
+From https://github.com/ghostty-org/ghostty
+ * branch                83fb95624b0439ee660c2679b43b38c8b63769cd -> FETCH_HEAD
+HEAD is now at 83fb95624 Bump version to 1.4.0
+Building libghostty-vt at Ghostty commit 83fb95624b0439ee660c2679b43b38c8b63769cd
+Installed libghostty-vt into /home/coder/.mux/src/libghostty-vt-node/tough-seals-think/vendor/libghostty-vt
+exit=0
+$ npm run build:native
+
+> @coder/libghostty-vt-node@0.1.0-beta.1 build:native
+> node-gyp rebuild
+
+gyp info it worked if it ends with ok
+gyp info using node-gyp@12.4.0
+gyp info using node@26.12.1 | linux | x64
+gyp info find Python using Python version 3.14.4 found at "/usr/bin/python3"
+
+gyp info spawn /usr/bin/python3
+gyp info spawn args [
+gyp info spawn args '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/node_modules/node-gyp/gyp/gyp_main.py',
+gyp info spawn args 'binding.gyp',
+gyp info spawn args '-f',
+gyp info spawn args 'make',
+gyp info spawn args '-I',
+gyp info spawn args '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/build/config.gypi',
+gyp info spawn args '-I',
+gyp info spawn args '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/node_modules/node-gyp/addon.gypi',
+gyp info spawn args '-I',
+gyp info spawn args '/home/coder/.cache/node-gyp/26.12.1/include/node/common.gypi',
+gyp info spawn args '-Dlibrary=shared_library',
+gyp info spawn args '-Dvisibility=default',
+gyp info spawn args '-Dnode_root_dir=/home/coder/.cache/node-gyp/26.12.1',
+gyp info spawn args '-Dnode_gyp_dir=/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/node_modules/node-gyp',
+gyp info spawn args '-Dnode_lib_file=/home/coder/.cache/node-gyp/26.12.1/<(target_arch)/node.lib',
+gyp info spawn args '-Dmodule_root_dir=/home/coder/.mux/src/libghostty-vt-node/tough-seals-think',
+gyp info spawn args '-Dnode_engine=v8',
+gyp info spawn args '--depth=.',
+gyp info spawn args '--no-parallel',
+gyp info spawn args '--generator-output',
+gyp info spawn args 'build',
+gyp info spawn args '-Goutput_dir=.'
+gyp info spawn args ]
+gyp info spawn make
+gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+make: Entering directory '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/build'
+  CC(target) Release/obj.target/nothing/node_modules/node-addon-api/nothing.o
+rm -f Release/obj.target/node_modules/node-addon-api/nothing.a Release/obj.target/node_modules/node-addon-api/nothing.a.ar-file-list; mkdir -p `dirname Release/obj.target/node_modules/node-addon-api/nothing.a`
+ar crs Release/obj.target/node_modules/node-addon-api/nothing.a @Release/obj.target/node_modules/node-addon-api/nothing.a.ar-file-list
+  COPY Release/nothing.a
+  CXX(target) Release/obj.target/libghostty_vt_node/native/addon.o
+  CXX(target) Release/obj.target/libghostty_vt_node/native/libghostty_vt_shim.o
+  CXX(target) Release/obj.target/libghostty_vt_node/native/terminal.o
+  SOLINK_MODULE(target) Release/obj.target/ghostty_vt_node.node
+  COPY Release/ghostty_vt_node.node
+make: Leaving directory '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/build'
+gyp info ok 
+exit=0
+$ npm test
+
+> @coder/libghostty-vt-node@0.1.0-beta.1 test
 > vitest run
 
-[?25l
- RUN  v4.1.5 /Users/thomask33/Projects/libghostty-vt-node
 
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/home/coder/.mux/src/libghostty-vt-node/tough-seals-think[39m
 
- Test Files  2 passed (2)
-      Tests  2 passed | 4 skipped (6)
-   Start at  16:06:30
-   Duration  118ms (transform 49ms, setup 0ms, import 71ms, tests 4ms, environment 0ms)
+ [32m✓[39m test/load.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m test/terminal.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m test/workers.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m test/mouse-safety.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 309[2mms[22m[39m
+ [32m✓[39m test/scripts.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 952[2mms[22m[39m
 
-[?25h⠙[1G[0K
-> @coder/libghostty-vt-node@0.1.0 smoke
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m73 passed[39m[22m[90m (73)[39m
+[2m   Start at [22m 01:39:39
+[2m   Duration [22m 1.08s[2m (transform 95ms, setup 0ms, import 205ms, tests 1.45s, environment 0ms)[22m
+
+exit=0
+$ npm run smoke
+
+> @coder/libghostty-vt-node@0.1.0-beta.1 smoke
 > tsx examples/smoke.ts
 
-/Users/thomask33/Projects/libghostty-vt-node/src/loader.ts:39
-    throw new Error(
-          ^
-
-Error: Failed to load @coder/libghostty-vt-node native addon. Build it with `npm run build:native`, or use an npm package that includes a matching prebuild. If building locally, provide libghostty-vt with `npm run build:libghostty` or LIBGHOSTTY_VT_PREFIX.
-    at loadNative (/Users/thomask33/Projects/libghostty-vt-node/src/loader.ts:39:11)
-    at createTerminal (/Users/thomask33/Projects/libghostty-vt-node/src/index.ts:127:23)
-    ... 3 lines matching cause stack trace ...
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
-  [cause]: Error: No native build was found for platform=darwin arch=arm64 runtime=node abi=141 uv=1 armv=8 libc=glibc node=25.9.0
-      loaded from: /Users/thomask33/Projects/libghostty-vt-node
-  
-      at load.resolve.load.path (/Users/thomask33/Projects/libghostty-vt-node/node_modules/node-gyp-build/node-gyp-build.js:60:9)
-      at load (/Users/thomask33/Projects/libghostty-vt-node/node_modules/node-gyp-build/node-gyp-build.js:22:30)
-      at loadNative (/Users/thomask33/Projects/libghostty-vt-node/src/loader.ts:34:19)
-      at createTerminal (/Users/thomask33/Projects/libghostty-vt-node/src/index.ts:127:23)
-      at <anonymous> (/Users/thomask33/Projects/libghostty-vt-node/examples/smoke.ts:3:14)
-      at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
-      at async node:internal/modules/esm/loader:639:26
-      at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+native info
+{
+  "napiVersion": 10,
+  "ghosttyVersion": "0.1.0-dev",
+  "packageVersion": "0.1.0-beta.1",
+  "platform": "linux",
+  "arch": "x64"
 }
+visible text
+hello
+     red text
+    cursor
 
-Node.js v25.9.0
-⠙[1G[0K
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mouse bytes
+[27,91,60,48,59,53,59,54,77]
+snapshot summary
+{
+  "cols": 80,
+  "rows": 24,
+  "cursorRow": 2,
+  "cursorCol": 10,
+  "isAltScreen": false,
+  "visibleLineCount": 24,
+  "cellCount": 19
+}
+exit=0
+$ npm pack --dry-run
+npm notice
+npm notice package: @coder/libghostty-vt-node@0.1.0-beta.1
+npm notice Tarball Contents
+npm notice 968B CHANGELOG.md
+npm notice 1.1kB LICENSE
+npm notice 16.9kB README.md
+npm notice 1.2kB binding.gyp
+npm notice 648B dist/index.d.ts
+npm notice 485B dist/index.d.ts.map
+npm notice 8.6kB dist/index.js
+npm notice 7.7kB dist/index.js.map
+npm notice 325B dist/loader.d.ts
+npm notice 334B dist/loader.d.ts.map
+npm notice 2.0kB dist/loader.js
+npm notice 1.7kB dist/loader.js.map
+npm notice 3.3kB dist/types.d.ts
+npm notice 3.1kB dist/types.d.ts.map
+npm notice 44B dist/types.js
+npm notice 102B dist/types.js.map
+npm notice 346B native/addon.cc
+npm notice 2.3kB native/libghostty_vt_shim.cc
+npm notice 549B native/libghostty_vt_shim.hh
+npm notice 18.3kB native/README.md
+npm notice 35.5kB native/terminal.cc
+npm notice 2.1kB native/terminal.hh
+npm notice 2.0kB package.json
+npm notice 12.7MB prebuilds/linux-x64/@coder+libghostty-vt-node.node
+npm notice 3.8kB scripts/assemble-prebuilds.mjs
+npm notice 2.9kB scripts/build-libghostty-vt.sh
+npm notice 2.7kB scripts/create-release-tag.mjs
+npm notice 11.2kB scripts/README.md
+npm notice 1.8kB scripts/resolve-libghostty-vt.mjs
+npm notice 1.9kB scripts/resolve-npm-publish-tag.mjs
+npm notice 1.5kB scripts/verify-prebuilds.mjs
+npm notice Tarball Details
+npm notice name: @coder/libghostty-vt-node
+npm notice version: 0.1.0-beta.1
+npm notice filename: coder-libghostty-vt-node-0.1.0-beta.1.tgz
+npm notice package size: 3.7 MB
+npm notice unpacked size: 12.9 MB
+npm notice shasum: 745acaff5d026b0ffa6dd5fca645c2134867e848
+npm notice integrity: sha512-zphUs2JiLK6LS[...]zSI7BzBU3xt6Q==
+npm notice total files: 31
+npm notice
+coder-libghostty-vt-node-0.1.0-beta.1.tgz
+exit=0

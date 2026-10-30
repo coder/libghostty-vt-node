@@ -102,7 +102,7 @@ lib_dir="${LIBGHOSTTY_VT_PREFIX:-$ROOT/vendor/libghostty-vt}"
 lib_stamp="$lib_dir/.verify-libghostty-vt-node.sha256"
 lib_inputs="$( { cat scripts/build-libghostty-vt.sh; env | grep -E '^(GHOSTTY_|LIBGHOSTTY_VT_)' | sort || true; } | sha_stdin)"
 if [[ ! -f "$lib_dir/lib/libghostty-vt.a" || "$(cat "$lib_stamp" 2>/dev/null)" != "$lib_inputs" ]]; then
-  step "npm run build:libghostty (missing, or built from other inputs: needs zig 0.15.2 and the network)"
+  step "npm run build:libghostty (missing, or built from other inputs: needs zig 0.17.0 and the network)"
   run npm run build:libghostty
   echo "$lib_inputs" > "$lib_stamp"
 fi
