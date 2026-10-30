@@ -165,6 +165,23 @@ describeIfNative("GhosttyVtTerminal", () => {
     }
   });
 
+  it("pulls history back when one resize makes the terminal narrower and taller", () => {
+    const resized = (steps: [number, number][]) => {
+      const term = createTerminal({ cols: 80, rows: 24, scrollbackLimit: 10_000 });
+      try {
+        term.feed(Array.from({ length: 40 }, (_, i) => `out ${i}\r\n`).join("") + "$ ");
+        for (const [cols, rows] of steps) term.resize(cols, rows);
+        return term.snapshot({ includeScrollback: true });
+      } finally {
+        term.dispose();
+      }
+    };
+    const oneStep = resized([[80, 10], [60, 30]]);
+    expect(oneStep.cursorRow).toBe(29);
+    expect(oneStep.visibleLines[29]?.text).toBe("$");
+    expect(oneStep).toEqual(resized([[80, 10], [80, 30], [60, 30]]));
+  });
+
   it("updates snapshot dimensions on resize", () => {
     const term = createTerminal({ cols: 80, rows: 24 });
     try {

@@ -326,7 +326,19 @@ Napi::Value TerminalWrap::Resize(const Napi::CallbackInfo& info) {
 
   const uint16_t cols = PositiveUint16(env, info[0], "cols");
   const uint16_t rows = PositiveUint16(env, info[1], "rows");
-  const GhosttyResult result = ghostty_terminal_resize(terminal, cols, rows, 0, 0);
+  uint16_t old_cols = 0;
+  uint16_t old_rows = 0;
+  GhosttyResult result = ghostty_terminal_get(terminal, GHOSTTY_TERMINAL_DATA_COLS, &old_cols);
+  if (result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_terminal_get(cols)", result);
+  result = ghostty_terminal_get(terminal, GHOSTTY_TERMINAL_DATA_ROWS, &old_rows);
+  if (result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_terminal_get(rows)", result);
+  // Ghostty v1.4.0 does not pull scrollback back into view when one resize
+  // both narrows and grows the grid, but it does when the rows grow first.
+  if (cols < old_cols && rows > old_rows) {
+    result = ghostty_terminal_resize(terminal, old_cols, rows, 0, 0);
+    if (result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_terminal_resize", result);
+  }
+  result = ghostty_terminal_resize(terminal, cols, rows, 0, 0);
   if (result != GHOSTTY_SUCCESS) {
     ThrowResult(env, "ghostty_terminal_resize", result);
   }
