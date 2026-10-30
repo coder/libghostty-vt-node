@@ -60,7 +60,7 @@ C++ declarations:
 - `scrollbackLines` rows are numbered from 0 with the history point tag. The count is clamped to the `uint32_t` maximum [native/terminal.cc:TerminalWrap::BuildSnapshot].
 - An unknown color tag fails `assert(false)` [native/terminal.cc:TerminalWrap::ResolveStyleColor].
 - `getNativeInfo` leaves out `ghosttyVersion` and `ghosttyCommit` when `BuildInfoString` returns an empty string, which it does when `ghostty_build_info` fails [native/terminal.cc:GetNativeInfo] [native/libghostty_vt_shim.cc:BuildInfoString]. It also leaves out `ghosttyCommit` for a libghostty-vt built without build metadata in its version.
-- When `scripts/build-libghostty-vt.sh` built libghostty-vt, `ghosttyCommit` equals `commit` in `$PREFIX/ghostty-source.json`, and `ghosttyVersion` ends with `+<commit>` [scripts/build-libghostty-vt.sh:ghostty_commit].
+- When `scripts/build-libghostty-vt.sh` built libghostty-vt, `ghosttyCommit` equals `commit` in `$PREFIX/ghostty-source.json` [scripts/build-libghostty-vt.sh:ghostty_commit].
 - `Utf8FromCodepoint` asserts `codepoint <= 0x10FFFF` [native/libghostty_vt_shim.cc:Utf8FromCodepoint]. `HexColor` asserts that it wrote 7 characters [native/libghostty_vt_shim.cc:HexColor].
 
 ## Side Effects
