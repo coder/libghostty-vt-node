@@ -4,14 +4,17 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.4](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.4) - 2026-10-30
+
+## Fixed
+- `getNativeInfo()` now reports the Ghostty source commit the addon was built from. `ghosttyCommit` returns the full SHA (e.g. `"83fb95624b0439ee660c2679b43b38c8b63769cd"`) and `ghosttyVersion` includes it as SemVer build metadata (e.g. `"0.1.0-dev+83fb9562..."`). The native code and `NativeInfo` type shape are unchanged ([#53](https://github.com/coder/libghostty-vt-node/pull/53) by @ThomasK33).
+
 ## [v0.1.0-beta.3](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.3) - 2026-10-30
 
 ## Fixed
 - Prevent `snapshot()` from running arbitrary JavaScript (via accessors on `Object.prototype` / `Array.prototype`) while the native code holds the terminal handle. Snapshot result objects are now built with own data properties (`napi_define_properties`), and both `includeScrollback` and `includeCells` options are read before the disposed-terminal check, so a getter that disposes the terminal during that read throws "GhosttyVtTerminal has been disposed". Before, such a setter (for example on `row` or `text`) crashed Node with a segfault or an assertion abort, and such a getter aborted it on an assertion ([#46](https://github.com/coder/libghostty-vt-node/pull/46) by @ThomasK33).
 
-## [v0.1.0-beta.2](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.2) - 2026-10-30
-
-## Added
+## [v0.1.0-beta.2](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.2) - 2026-10-30## Added
 - `encodeMouse(event, options)` on every terminal, backed by Ghostty's mouse-protocol encoder with validation of grid geometry, surface coordinates, and pressed-button state. It reads each caller field once, so the value it validates is the value it encodes. In UTF-8 mouse mode (1005), rows whose encoded value is above U+FFFF encode as 4-byte UTF-8, and cells whose encoded value would be a Unicode surrogate throw a `RangeError`. A new `supportsMouseInput` capability marker lets consumers probe at import time ([#12](https://github.com/coder/libghostty-vt-node/pull/12), [#41](https://github.com/coder/libghostty-vt-node/pull/41), [#42](https://github.com/coder/libghostty-vt-node/pull/42)).
 - `SnapshotCell` now exposes `faint`, `inverse`, `invisible`, and `strikethrough` SGR attributes, following the same "present only when set" convention as `bold`/`italic`/`underline`. Note that `inverse` is the raw attribute: `foreground`/`background` are not swapped ([#17](https://github.com/coder/libghostty-vt-node/pull/17)).
 - `TerminalSnapshot.cursorVisible: boolean` reflects DECTCEM state (`ESC[?25h` / `ESC[?25l`). The field is required, so code that constructs its own `TerminalSnapshot` objects must set it ([#17](https://github.com/coder/libghostty-vt-node/pull/17), [#38](https://github.com/coder/libghostty-vt-node/pull/38)).
