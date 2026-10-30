@@ -12,6 +12,7 @@ fail=0
 ok() { echo "ok    $*"; }
 bad() { echo "FAIL  $*"; fail=1; }
 warn() { echo "WARN  $*"; }
+sha_stdin() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi | cut -d' ' -f1; }
 
 if [[ ! -f "$INSTANCE/instance.json" ]]; then
   bad "no $INSTANCE/instance.json: run launch.sh first"
@@ -26,11 +27,11 @@ field() { node -e 'const i=require(process.argv[1]); process.stdout.write(String
 [[ "$(field checkout)" == "$ROOT" ]] && ok "built from this checkout" || bad "built from $(field checkout), not $ROOT"
 
 head_now="$(git -C "$ROOT" rev-parse HEAD)"
-diff_now="$(git -C "$ROOT" diff HEAD | { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi; } | cut -d' ' -f1)"
+diff_now="$(git -C "$ROOT" diff HEAD | sha_stdin)"
 if [[ "$(field commit)" == "$head_now" && "$(field trackedDiffSha256)" == "$diff_now" ]]; then
   ok "current: built from HEAD $head_now and the same uncommitted diff"
 else
-  bad "STALE: the checkout changed after launch (HEAD or tracked diff). Run cleanup.sh, then launch.sh with a new RUN_ROOT"
+  bad "STALE: the checkout changed after launch (HEAD or tracked diff). Run cleanup.sh, then launch.sh again"
 fi
 
 [[ "$(field node)" == "$(node --version)" ]] && ok "node $(node --version) matches launch" \
@@ -47,6 +48,11 @@ case "$addon" in
   "$pkg_dir"/prebuilds/*.node) ok "addon loads from the packed prebuild: ${addon#"$CONSUMER"/}" ;;
   *) bad "node-gyp-build does not pick a packed prebuild: $addon" ;;
 esac
+addon_sha=""
+[[ -f "$addon" ]] && addon_sha="$(sha_stdin < "$addon")"
+want_sha="$(field addonSha256)"
+[[ "$addon_sha" == "$want_sha" ]] && ok "addon sha256 $addon_sha matches instance.json" \
+  || bad "addon sha256 is ${addon_sha:-unreadable}, instance.json has addonSha256 $want_sha: the installed addon changed after launch. Run cleanup.sh, then launch.sh again"
 
 info="$(cd "$CONSUMER" && node --input-type=module -e '
   const { fileURLToPath } = await import("node:url");

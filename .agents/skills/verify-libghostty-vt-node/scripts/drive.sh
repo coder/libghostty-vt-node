@@ -19,11 +19,13 @@ OUT="$RUN_ROOT/evidence/$NAME"
 [[ -f "$RUN_ROOT/instance/instance.json" ]] || { echo "error: no instance in $RUN_ROOT: run launch.sh" >&2; exit 2; }
 [[ "$NAME" =~ ^[a-z0-9][a-z0-9._-]*$ ]] || { echo "error: NAME must match [a-z0-9][a-z0-9._-]*" >&2; exit 2; }
 # One mkdir reserves the name, so two runs with one NAME cannot share evidence.
-mkdir -p "$RUN_ROOT/evidence" "$CONSUMER/journeys"
+mkdir -p "$RUN_ROOT/evidence" "$CONSUMER/journeys" || exit 2
 mkdir "$OUT" 2>/dev/null || { echo "error: $OUT exists: pick a new NAME, evidence is never overwritten" >&2; exit 2; }
-cat > "$CONSUMER/journeys/$NAME.mjs"
-cp "$CONSUMER/journeys/$NAME.mjs" "$OUT/journey.mjs"
-echo "cd $CONSUMER && node $* journeys/$NAME.mjs   # $(date -u +%Y-%m-%dT%H:%M:%SZ) $(node --version)" > "$OUT/command.txt"
+# A failed write here would let node run a stale or partial journey.
+{ cat > "$CONSUMER/journeys/$NAME.mjs" &&
+  cp "$CONSUMER/journeys/$NAME.mjs" "$OUT/journey.mjs" &&
+  echo "cd $CONSUMER && node $* journeys/$NAME.mjs   # $(date -u +%Y-%m-%dT%H:%M:%SZ) $(node --version)" > "$OUT/command.txt"
+} || { echo "error: could not save the journey and command.txt for $NAME: node did not run" >&2; exit 2; }
 
 (cd "$CONSUMER" && node "$@" "journeys/$NAME.mjs") > "$OUT/stdout.txt" 2> "$OUT/stderr.txt"
 code=$?
