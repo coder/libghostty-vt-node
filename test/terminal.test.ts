@@ -522,6 +522,39 @@ describeIfNative("GhosttyVtTerminal", () => {
     expect((thrown as Error).message).toMatch(message);
   });
 
+  it.each<[string, () => unknown, RegExp]>([
+    ["Uint16Array", () => new Uint16Array([0x4241]), /^feed typed array must be Uint8Array$/],
+    ["Float32Array", () => new Float32Array([1]), /^feed typed array must be Uint8Array$/],
+    ["Uint8ClampedArray", () => new Uint8ClampedArray([65, 66]), /^feed typed array must be Uint8Array$/],
+    ["DataView", () => new DataView(new Uint8Array([65, 66]).buffer), /^feed data must be a string, Buffer, or Uint8Array$/],
+  ])("rejects a %s in the addon feed with a TypeError", (_name, makeData, message) => {
+    const term = loadNative().createTerminal({ cols: 10, rows: 1 });
+    let thrown: unknown;
+    try {
+      term.feed(makeData() as Uint8Array);
+    } catch (error) {
+      thrown = error;
+    } finally {
+      term.dispose();
+    }
+    expect(thrown).toBeInstanceOf(TypeError);
+    expect((thrown as Error).message).toMatch(message);
+  });
+
+  it.each<[string, () => Uint8Array]>([
+    ["Buffer", () => Buffer.from("AB")],
+    ["Uint8Array", () => new Uint8Array([65, 66])],
+    ["Buffer slice with a byte offset", () => Buffer.from("xxABxx").subarray(2, 4)],
+  ])("writes a %s in the addon feed", (_name, makeData) => {
+    const term = loadNative().createTerminal({ cols: 10, rows: 1 });
+    try {
+      term.feed(makeData());
+      expect(term.getVisibleText()).toBe("AB");
+    } finally {
+      term.dispose();
+    }
+  });
+
   it("makes dispose idempotent and rejects use after dispose", () => {
     const term = createTerminal({ cols: 80, rows: 24 });
     term.dispose();
