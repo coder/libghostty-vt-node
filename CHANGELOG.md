@@ -7,7 +7,7 @@ All notable user-facing changes to this package will be documented in this file.
 ## [v0.1.0-beta.2](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.2) - 2026-10-30
 
 ## Added
-- `encodeMouse(event, options)` on every terminal, backed by Ghostty's mouse-protocol encoder with validation of grid geometry, surface coordinates, and pressed-button state. A new `supportsMouseInput` capability marker lets consumers probe at import time ([#12](https://github.com/coder/libghostty-vt-node/pull/12)).
+- `encodeMouse(event, options)` on every terminal, backed by Ghostty's mouse-protocol encoder with validation of grid geometry, surface coordinates, and pressed-button state. It reads each caller field once, so the value it validates is the value it encodes. In UTF-8 mouse mode (1005), rows whose encoded value is above U+FFFF encode as 4-byte UTF-8, and cells whose encoded value would be a Unicode surrogate throw a `RangeError`. A new `supportsMouseInput` capability marker lets consumers probe at import time ([#12](https://github.com/coder/libghostty-vt-node/pull/12), [#41](https://github.com/coder/libghostty-vt-node/pull/41), [#42](https://github.com/coder/libghostty-vt-node/pull/42)).
 - `SnapshotCell` now exposes `faint`, `inverse`, `invisible`, and `strikethrough` SGR attributes, following the same "present only when set" convention as `bold`/`italic`/`underline`. Note that `inverse` is the raw attribute: `foreground`/`background` are not swapped ([#17](https://github.com/coder/libghostty-vt-node/pull/17)).
 - `TerminalSnapshot.cursorVisible: boolean` reflects DECTCEM state (`ESC[?25h` / `ESC[?25l`). The field is required, so code that constructs its own `TerminalSnapshot` objects must set it ([#17](https://github.com/coder/libghostty-vt-node/pull/17), [#38](https://github.com/coder/libghostty-vt-node/pull/38)).
 - EGM contract READMEs for `src/`, `native/`, `scripts/`, and `examples/`, plus Blueprint sections appended to the root README. `native/README.md` and `scripts/README.md` are shipped in the npm tarball ([#29](https://github.com/coder/libghostty-vt-node/pull/29)).
@@ -20,8 +20,6 @@ All notable user-facing changes to this package will be documented in this file.
 ## Fixed
 - Keep the `TerminalWrap` class reference per Node environment so `createTerminal` works correctly from `worker_threads` Workers and from the main thread after a worker that loaded the addon exits. The previous process-wide static could cause V8 aborts (`Cannot create a handle without a HandleScope`) or segfaults ([#23](https://github.com/coder/libghostty-vt-node/pull/23)).
 - Range-check `cols`, `rows`, and `scrollbackLimit` for `NaN`, infinities, and out-of-range values before casting in the native layer, replacing undefined behavior with a `RangeError` ([#30](https://github.com/coder/libghostty-vt-node/pull/30)).
-- `encodeMouse` now accepts UTF-8 mouse rows above U+FFFF (rows 65503-65534) in mode 1005 rather than throwing a spurious `RangeError`; surrogate guards remain ([#42](https://github.com/coder/libghostty-vt-node/pull/42)).
-- `encodeMouse` now reads each caller field exactly once, so hostile getters cannot pass TypeScript validation with one value and forward another to the native layer ([#41](https://github.com/coder/libghostty-vt-node/pull/41)).
 
 ## Security
 - Upgraded the repo Node toolchain to 26.12.1 for CVE-2026-111497 (Node2Shell). The published package's `engines.node` floor (`>=20.19`) is unchanged ([#21](https://github.com/coder/libghostty-vt-node/pull/21)).
