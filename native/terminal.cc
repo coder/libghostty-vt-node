@@ -307,10 +307,6 @@ Napi::Value TerminalWrap::Feed(const Napi::CallbackInfo& info) {
     string_data = info[0].As<Napi::String>().Utf8Value();
     data = reinterpret_cast<const uint8_t*>(string_data.data());
     len = string_data.size();
-  } else if (info[0].IsBuffer()) {
-    const auto buffer = info[0].As<Napi::Buffer<uint8_t>>();
-    data = buffer.Data();
-    len = buffer.Length();
   } else if (info[0].IsTypedArray()) {
     const auto typed_array = info[0].As<Napi::TypedArray>();
     if (typed_array.TypedArrayType() != napi_uint8_array) {

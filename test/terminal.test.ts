@@ -335,6 +335,46 @@ describeIfNative("GhosttyVtTerminal", () => {
     }
   });
 
+  it("reads every event, modifier, option, and geometry field once", () => {
+    const term = createTerminal({ cols: 80, rows: 24 });
+    try {
+      term.feed("\x1b[?1000h\x1b[?1006h");
+      const reads: Record<string, number> = {};
+      const counted = <T extends object>(values: T): T => {
+        const target = {};
+        for (const [key, value] of Object.entries(values)) {
+          reads[key] = 0;
+          Object.defineProperty(target, key, {
+            enumerable: true,
+            get: () => {
+              reads[key] = (reads[key] ?? 0) + 1;
+              return value;
+            },
+          });
+        }
+        return target as T;
+      };
+      const geometry = counted({
+        screenWidth: 80, screenHeight: 24, cellWidth: 1, cellHeight: 1,
+        paddingTop: 0, paddingBottom: 0, paddingRight: 0, paddingLeft: 0,
+      });
+      const options = counted({ geometry, anyButtonPressed: false, trackLastCell: false });
+      const modifiers = counted({ shift: true, ctrl: false, alt: true });
+      const event = counted({ action: "press", button: "left", x: 3, y: 5, modifiers } as const);
+
+      expect(term.encodeMouse(event, options)).toEqual(Buffer.from("\x1b[<12;4;6M"));
+      expect(reads).toEqual({
+        geometry: 1, anyButtonPressed: 1, trackLastCell: 1,
+        screenWidth: 1, screenHeight: 1, cellWidth: 1, cellHeight: 1,
+        paddingTop: 1, paddingBottom: 1, paddingRight: 1, paddingLeft: 1,
+        action: 1, button: 1, x: 1, y: 1, modifiers: 1,
+        shift: 1, ctrl: 1, alt: 1,
+      });
+    } finally {
+      term.dispose();
+    }
+  });
+
   it("covers button tracking, legacy releases, X10 limits, and UTF-8 coordinates", () => {
     const cases = [
       { mode: "\x1b[?1002h\x1b[?1006h", action: "motion", button: "left", x: 2, expected: Buffer.from("\x1b[<32;3;4M") },
@@ -520,6 +560,39 @@ describeIfNative("GhosttyVtTerminal", () => {
     }
     expect(thrown).toBeInstanceOf(RangeError);
     expect((thrown as Error).message).toMatch(message);
+  });
+
+  it.each<[string, () => unknown, RegExp]>([
+    ["Uint16Array", () => new Uint16Array([0x4241]), /^feed typed array must be Uint8Array$/],
+    ["Float32Array", () => new Float32Array([1]), /^feed typed array must be Uint8Array$/],
+    ["Uint8ClampedArray", () => new Uint8ClampedArray([65, 66]), /^feed typed array must be Uint8Array$/],
+    ["DataView", () => new DataView(new Uint8Array([65, 66]).buffer), /^feed data must be a string, Buffer, or Uint8Array$/],
+  ])("rejects a %s in the addon feed with a TypeError", (_name, makeData, message) => {
+    const term = loadNative().createTerminal({ cols: 10, rows: 1 });
+    let thrown: unknown;
+    try {
+      term.feed(makeData() as Uint8Array);
+    } catch (error) {
+      thrown = error;
+    } finally {
+      term.dispose();
+    }
+    expect(thrown).toBeInstanceOf(TypeError);
+    expect((thrown as Error).message).toMatch(message);
+  });
+
+  it.each<[string, () => Uint8Array]>([
+    ["Buffer", () => Buffer.from("AB")],
+    ["Uint8Array", () => new Uint8Array([65, 66])],
+    ["Buffer slice with a byte offset", () => Buffer.from("xxABxx").subarray(2, 4)],
+  ])("writes a %s in the addon feed", (_name, makeData) => {
+    const term = loadNative().createTerminal({ cols: 10, rows: 1 });
+    try {
+      term.feed(makeData());
+      expect(term.getVisibleText()).toBe("AB");
+    } finally {
+      term.dispose();
+    }
   });
 
   it("makes dispose idempotent and rejects use after dispose", () => {
