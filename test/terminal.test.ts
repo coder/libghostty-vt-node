@@ -133,6 +133,20 @@ describeIfNative("GhosttyVtTerminal", () => {
     }
   });
 
+  // Ghostty added DECSTR in f473f31. Moving the pin past it makes this fail:
+  // then drop the README's soft-reset limit and assert the reset instead.
+  it("ignores the DECSTR soft reset with the pinned Ghostty", () => {
+    const term = createTerminal({ cols: 80, rows: 24 });
+    try {
+      term.feed("\x1b[?25l\x1b[7m\x1b[!pX");
+      const snapshot = term.snapshot({ includeCells: true });
+      expect(snapshot.cursorVisible).toBe(false);
+      expect(cellsByText(snapshot).get("X")?.inverse).toBe(true);
+    } finally {
+      term.dispose();
+    }
+  });
+
   it("updates snapshot dimensions on resize", () => {
     const term = createTerminal({ cols: 80, rows: 24 });
     try {

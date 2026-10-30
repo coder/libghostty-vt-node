@@ -88,11 +88,8 @@ export interface TerminalSnapshot {
   rows: number;
   cursorRow: number;
   cursorCol: number;
-  /**
-   * Cursor visibility from DECTCEM (`ESC[?25h` shows, `ESC[?25l` hides).
-   * The native binding always sets it; it is optional for compatibility.
-   */
-  cursorVisible?: boolean;
+  /** Cursor visibility from DECTCEM (`ESC[?25h` shows, `ESC[?25l` hides). */
+  cursorVisible: boolean;
   isAltScreen: boolean;
   visibleLines: VisibleLine[];
   scrollbackLines?: VisibleLine[];
