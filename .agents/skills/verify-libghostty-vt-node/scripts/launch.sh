@@ -16,9 +16,12 @@ if [[ $# -gt 0 ]]; then
   exit 2
 fi
 # instance.json records vendor/libghostty-vt, so the build must link that copy.
-supplied="$(compgen -e | grep -xE 'LIBGHOSTTY_VT_(PREFIX|INCLUDE_DIR|STATIC_LIB|LIB)' || true)"
+supplied=""
+for v in LIBGHOSTTY_VT_PREFIX LIBGHOSTTY_VT_INCLUDE_DIR LIBGHOSTTY_VT_STATIC_LIB LIBGHOSTTY_VT_LIB; do
+  [[ -z "${!v+set}" ]] || supplied+=" $v"
+done
 if [[ -n "$supplied" ]]; then
-  echo "error: launch.sh builds and links its own libghostty-vt in $ROOT/vendor/libghostty-vt. Unset ${supplied//$'\n'/ } and launch again." >&2
+  echo "error: launch.sh builds and links its own libghostty-vt in $ROOT/vendor/libghostty-vt. Unset${supplied} and launch again." >&2
   exit 2
 fi
 tmp="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
