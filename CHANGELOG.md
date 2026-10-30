@@ -4,6 +4,11 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.3](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.3) - 2026-10-30
+
+## Fixed
+- Prevent `snapshot()` from running arbitrary JavaScript (via accessors on `Object.prototype` / `Array.prototype`) while the native code holds the terminal handle. Snapshot result objects are now built with own data properties (`napi_define_properties`), and both `includeScrollback` and `includeCells` options are read before the disposed-terminal check, so a getter that disposes the terminal during that read throws "GhosttyVtTerminal has been disposed". Before, such a setter (for example on `row` or `text`) crashed Node with a segfault or an assertion abort, and such a getter aborted it on an assertion ([#46](https://github.com/coder/libghostty-vt-node/pull/46) by @ThomasK33).
+
 ## [v0.1.0-beta.2](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.2) - 2026-10-30
 
 ## Added
