@@ -192,7 +192,8 @@ Manual dispatch and direct `v*.*.*` tag pushes are available for recovery, but m
 The repository `.npmrc` sets `min-release-age=7`. When `npm install` or `npm update` picks a new version, npm skips every version published less than 7 days ago. A compromised or broken release then has a week to be found and pulled before it can reach `package-lock.json`. The setting needs npm 11.10 or later. The Node version pinned in `mise.toml` ships npm 11.20.
 
 - `npm ci` installs exactly what the lockfile pins. It does not check release age, and neither does `npm install` for packages that the lockfile already pins.
-- An explicit request for a version that is too new fails with `ETARGET` ("No matching version found for ... with a date before ...").
+- `npm update` moves every lockfile entry younger than 7 days back to an older version, without a warning. This can undo a recent Dependabot security fix. Check the lockfile diff for downgrades and run `npm audit` before you commit.
+- An explicit request for a version that is too new fails with `ETARGET` ("No matching version found for ... with a date before ..."). So does `npm update` when `package.json` asks for a version that is too new.
 - To take a newer release on purpose, for example an urgent fix, pass `--min-release-age=0` to that one command and give the reason in the PR.
 - `npm audit fix` follows the same rule. If the fixed version is less than 7 days old, npm keeps the vulnerable version, warns, and exits with a non-zero code. Rerun it with `--min-release-age=0` to take the fix.
 - Dependabot security updates bypass this setting, so they are not delayed. The repository has no `.github/dependabot.yml`, so Dependabot opens no version-update PRs.
