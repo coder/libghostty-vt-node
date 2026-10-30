@@ -28,6 +28,7 @@ run test-output.txt npm test
 run smoke-output.txt npm run smoke
 run npm-pack-output.txt npm pack --dry-run
 node -e "import('./dist/index.js').then((m)=>console.log(JSON.stringify(m.getNativeInfo(), null, 2))).catch((err)=>{ console.log(JSON.stringify({ ok: false, error: err.message, cause: err.cause ? String(err.cause.message || err.cause) : undefined }, null, 2)); process.exitCode = 0; })" > "$D/native-info.json"
+if grep -q '"ok": false' "$D/native-info.json"; then echo "error: dist/index.js failed to load the addon" >&2; failed=1; fi
 {
   echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "node=$got_node"
