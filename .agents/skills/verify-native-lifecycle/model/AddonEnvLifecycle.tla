@@ -148,7 +148,8 @@ LoadAddon(e) ==
 (* with env.GetInstanceData; process_static reads the static. Then         *)
 (* FunctionReference::New runs in the env stored in the reference, not in  *)
 (* the caller's env. The TerminalWrap constructor calls                    *)
-(* ghostty_terminal_new, then ghostty_mouse_encoder_new.                  *)
+(* ghostty_terminal_new and ghostty_terminal_set, then                     *)
+(* ghostty_mouse_encoder_new.                                              *)
 (***************************************************************************)
 CreateTerminal(e, t) ==
     /\ env[e] = "loaded"
@@ -158,9 +159,10 @@ CreateTerminal(e, t) ==
     /\ handleUse' = NoHandleUse
     /\ UNCHANGED <<env, slot>>
 
-\* ghostty_mouse_encoder_new fails: the constructor frees the terminal, sets
-\* terminal_ = nullptr, and throws. ~TerminalWrap does not run, because the
-\* C++ constructor did not finish. No JS object exists.
+\* ghostty_terminal_set or ghostty_mouse_encoder_new fails: the constructor
+\* frees the terminal once, leaves terminal_ = nullptr, and throws.
+\* ~TerminalWrap does not run, because the C++ constructor did not finish.
+\* No JS object exists.
 CreateFails(e, t) ==
     /\ env[e] = "loaded"
     /\ term[t].js = "none"
@@ -211,8 +213,9 @@ Dispose(t) ==
 (*   (TakeHandlesLast = FALSE), it first copied terminal_ and             *)
 (*   mouse_encoder_ into locals (RequireTerminal, RequireMouseEncoder).    *)
 (* EncodeCall: the reads end. With TakeHandlesLast, EncodeMouse checks and *)
-(*   copies the pointers here. Then it calls ghostty_terminal_mode_get and *)
-(*   the ghostty_mouse_encoder_* functions, and no JS runs until return.   *)
+(*   copies the pointers here. Then it calls ghostty_terminal_get          *)
+(*   (mode) and the ghostty_mouse_encoder_* functions, and no JS runs      *)
+(*   until return.                                                         *)
 (* Without JsInNativeRead, EncodeEnter and EncodeCall are one step.        *)
 (***************************************************************************)
 EncodeTs(t) ==
