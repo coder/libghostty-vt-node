@@ -31,7 +31,7 @@ diff_now="$(git -C "$ROOT" diff HEAD | sha_stdin)"
 if [[ "$(field commit)" == "$head_now" && "$(field trackedDiffSha256)" == "$diff_now" ]]; then
   ok "current: built from HEAD $head_now and the same uncommitted diff"
 else
-  bad "STALE: the checkout changed after launch (HEAD or tracked diff). Run cleanup.sh, then launch.sh with a new RUN_ROOT"
+  bad "STALE: the checkout changed after launch (HEAD or tracked diff). Run cleanup.sh, then launch.sh again"
 fi
 
 [[ "$(field node)" == "$(node --version)" ]] && ok "node $(node --version) matches launch" \

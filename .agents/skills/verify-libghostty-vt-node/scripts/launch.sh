@@ -101,7 +101,7 @@ JSON
 (cd "$INSTANCE/consumer" && run npm install --no-audit --no-fund "$INSTANCE/$tarball")
 
 if [[ "$(checkout_state)" != "$state_before" ]]; then
-  echo "error: the checkout changed during the launch (HEAD or tracked diff). Run cleanup.sh, then launch again with a new RUN_ROOT." >&2
+  echo "error: the checkout changed during the launch (HEAD or tracked diff). Run cleanup.sh, then launch again." >&2
   exit 1
 fi
 static_lib="$lib_dir/lib/libghostty-vt.a"
