@@ -1,10 +1,10 @@
 # Install, load, and native info
 
-A user installs the npm package and imports it. The package loads the prebuilt addon for the user's platform without a compiler. `getNativeInfo()` reports the package version, Node-API version, platform, and Ghostty version. When no addon fits, the import works and the first native call throws a clear setup error.
+A user installs the npm package and imports it. The package loads the prebuilt addon for the user's platform without a compiler. `getNativeInfo()` reports the package version, Node-API version, platform, the libghostty-vt version, and the Ghostty commit the addon was built from. When no addon fits, the import works and the first native call throws a clear setup error.
 
 ## Sub-features
 
-- `info-fields` reports the package version, Node-API version, platform, arch, and Ghostty version.
+- `info-fields` reports the package version, Node-API version, platform, arch, libghostty-vt version, and Ghostty commit (`ghosttyCommit`).
 - `info-package-contents` ships `dist/` and the prebuild, and leaves sources and tests out.
 - `info-load-error` throws the setup error when the addon is missing.
 
@@ -20,7 +20,7 @@ Preconditions:
 - `launch.sh` printed `READY RUN_ROOT=...`, and `doctor.sh "$RUN_ROOT"` exits `0`.
 - `S=.agents/skills/verify-libghostty-vt-node/scripts`, run from the repo root.
 
-- **Native info.** Run `info-fields`. Exit `0`. Stdout is one JSON object with `packageVersion` equal to `package.json`'s version, `napiVersion` 8 or more, `platform` and `arch` of this machine, and a `ghosttyVersion` string.
+- **Native info.** Run `info-fields`. Exit `0`. Stdout is one JSON object with `packageVersion` equal to `package.json`'s version, `napiVersion` 8 or more, `platform` and `arch` of this machine, `ghosttyCommit` equal to the default `GHOSTTY_COMMIT` in the installed `scripts/build-libghostty-vt.sh`, and `ghosttyVersion` ending with `+` and that commit.
 
 ```sh
 $S/drive.sh "$RUN_ROOT" info-fields <<'JS'
@@ -29,11 +29,15 @@ import { readFileSync } from "node:fs";
 import { getNativeInfo } from "@coder/libghostty-vt-node";
 const info = getNativeInfo();
 const pkg = JSON.parse(readFileSync("node_modules/@coder/libghostty-vt-node/package.json", "utf8"));
+const buildScript = readFileSync("node_modules/@coder/libghostty-vt-node/scripts/build-libghostty-vt.sh", "utf8");
+const pinned = buildScript.match(/^GHOSTTY_COMMIT="\$\{GHOSTTY_COMMIT:-([0-9a-f]{40})\}"$/m)?.[1];
+assert.ok(pinned, "no default GHOSTTY_COMMIT in scripts/build-libghostty-vt.sh");
 console.log(JSON.stringify(info));
 assert.equal(info.packageVersion, pkg.version);
 assert.ok(info.napiVersion >= 8);
 assert.deepEqual([info.platform, info.arch], [process.platform, process.arch]);
-assert.equal(typeof info.ghosttyVersion, "string");
+assert.equal(info.ghosttyCommit, pinned);
+assert.ok(info.ghosttyVersion.endsWith(`+${pinned}`), info.ghosttyVersion);
 JS
 ```
 
@@ -73,7 +77,7 @@ JS
 
 ## Gotchas
 
-- `getNativeInfo()` has no `ghosttyCommit` with the current build (the Ghostty build reports no build string). Do not use it to check the pinned commit.
-- `ghosttyVersion` is `0.1.0-dev` at the current pin. It is Ghostty's version, not this package's.
+- `ghosttyCommit` is the full Ghostty commit only when `scripts/build-libghostty-vt.sh` built libghostty-vt. A prebuild from a build with `GHOSTTY_COMMIT` overridden fails `info-fields`.
+- `ghosttyVersion` is libghostty-vt's version with the commit as build metadata, `0.1.0-dev+<commit>` at the current pin. It is not the Ghostty release (1.4.0) and not this package's version.
 - The import itself never fails for a missing addon. The loader runs on the first native call (`createTerminal` or `getNativeInfo`).
 - `info-load-error` writes `instance/no-addon/`. `cleanup.sh` removes it with the instance.
