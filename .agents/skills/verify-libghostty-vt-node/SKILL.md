@@ -17,7 +17,7 @@ S=.agents/skills/verify-libghostty-vt-node/scripts
 
 ## Requirements
 
-- The toolchain that `mise.toml` pins: Node `26.12.1` and Zig `0.17.0` on `PATH`. `mise install` installs them. If `mise exec` fails on your host, put the two install directories on `PATH` directly, for example `~/.local/share/mise/installs/node/26.12.1/bin` and `~/.local/share/mise/installs/zig/0.15.2`.
+- The toolchain that `mise.toml` pins: Node `26.12.1` and Zig `0.17.0` on `PATH`. `mise install` installs them. If `mise exec` fails on your host, put the two install directories on `PATH` directly, for example `~/.local/share/mise/installs/node/26.12.1/bin` and `~/.local/share/mise/installs/zig/0.17.0`.
 - A C++17 compiler and Python for `node-gyp`.
 - A checkout that mise trusts. In an untrusted copy, a mise shim that a build step calls fails with `Config files in .../mise.toml are not trusted`, and `launch.sh` exits `1`.
 - The network on the first launch: `npm ci`, the Ghostty clone in `npm run build:libghostty`, and the dependency install in the consumer project.
