@@ -21,10 +21,11 @@ npm notice 102B dist/types.js.map
 npm notice 346B native/addon.cc
 npm notice 2.3kB native/libghostty_vt_shim.cc
 npm notice 549B native/libghostty_vt_shim.hh
-npm notice 18.1kB native/README.md
-npm notice 34.7kB native/terminal.cc
+npm notice 18.3kB native/README.md
+npm notice 35.5kB native/terminal.cc
 npm notice 2.1kB native/terminal.hh
 npm notice 2.0kB package.json
+npm notice 12.7MB prebuilds/linux-x64/@coder+libghostty-vt-node.node
 npm notice 3.8kB scripts/assemble-prebuilds.mjs
 npm notice 2.9kB scripts/build-libghostty-vt.sh
 npm notice 2.7kB scripts/create-release-tag.mjs
@@ -36,11 +37,11 @@ npm notice Tarball Details
 npm notice name: @coder/libghostty-vt-node
 npm notice version: 0.1.0-beta.1
 npm notice filename: coder-libghostty-vt-node-0.1.0-beta.1.tgz
-npm notice package size: 36.6 kB
-npm notice unpacked size: 134.2 kB
-npm notice shasum: 7454ce26d89bc4bf57c09fc8b95e4f3af5379699
-npm notice integrity: sha512-HN9NJw4gfkESq[...]FI+TqQBKfzbsg==
-npm notice total files: 30
+npm notice package size: 3.7 MB
+npm notice unpacked size: 12.9 MB
+npm notice shasum: 745acaff5d026b0ffa6dd5fca645c2134867e848
+npm notice integrity: sha512-zphUs2JiLK6LS[...]zSI7BzBU3xt6Q==
+npm notice total files: 31
 npm notice
 coder-libghostty-vt-node-0.1.0-beta.1.tgz
 exit=0

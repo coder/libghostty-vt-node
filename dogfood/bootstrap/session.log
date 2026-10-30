@@ -5,7 +5,7 @@ $ npm install
 
 native build is explicit: run npm run build:native
 
-up to date, audited 93 packages in 481ms
+up to date, audited 93 packages in 491ms
 
 22 packages are looking for funding
   run `npm fund` for details
@@ -40,7 +40,7 @@ $ npm run build:native
 
 gyp info it worked if it ends with ok
 gyp info using node-gyp@12.4.0
-gyp info using node@22.23.4 | linux | x64
+gyp info using node@26.12.1 | linux | x64
 gyp info find Python using Python version 3.14.4 found at "/usr/bin/python3"
 
 gyp info spawn /usr/bin/python3
@@ -54,12 +54,12 @@ gyp info spawn args '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/b
 gyp info spawn args '-I',
 gyp info spawn args '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/node_modules/node-gyp/addon.gypi',
 gyp info spawn args '-I',
-gyp info spawn args '/home/coder/.cache/node-gyp/22.23.4/include/node/common.gypi',
+gyp info spawn args '/home/coder/.cache/node-gyp/26.12.1/include/node/common.gypi',
 gyp info spawn args '-Dlibrary=shared_library',
 gyp info spawn args '-Dvisibility=default',
-gyp info spawn args '-Dnode_root_dir=/home/coder/.cache/node-gyp/22.23.4',
+gyp info spawn args '-Dnode_root_dir=/home/coder/.cache/node-gyp/26.12.1',
 gyp info spawn args '-Dnode_gyp_dir=/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/node_modules/node-gyp',
-gyp info spawn args '-Dnode_lib_file=/home/coder/.cache/node-gyp/22.23.4/<(target_arch)/node.lib',
+gyp info spawn args '-Dnode_lib_file=/home/coder/.cache/node-gyp/26.12.1/<(target_arch)/node.lib',
 gyp info spawn args '-Dmodule_root_dir=/home/coder/.mux/src/libghostty-vt-node/tough-seals-think',
 gyp info spawn args '-Dnode_engine=v8',
 gyp info spawn args '--depth=.',
@@ -91,16 +91,16 @@ $ npm test
 
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/home/coder/.mux/src/libghostty-vt-node/tough-seals-think[39m
 
- [32m✓[39m test/load.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
- [32m✓[39m test/terminal.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 21[2mms[22m[39m
- [32m✓[39m test/workers.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 304[2mms[22m[39m
- [32m✓[39m test/mouse-safety.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 436[2mms[22m[39m
- [32m✓[39m test/scripts.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 1261[2mms[22m[39m
+ [32m✓[39m test/load.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m test/terminal.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m test/workers.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m test/mouse-safety.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 309[2mms[22m[39m
+ [32m✓[39m test/scripts.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 952[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
-[2m      Tests [22m [1m[32m72 passed[39m[22m[90m (72)[39m
-[2m   Start at [22m 01:10:03
-[2m   Duration [22m 1.45s[2m (transform 208ms, setup 0ms, import 352ms, tests 2.03s, environment 0ms)[22m
+[2m      Tests [22m [1m[32m73 passed[39m[22m[90m (73)[39m
+[2m   Start at [22m 01:39:39
+[2m   Duration [22m 1.08s[2m (transform 95ms, setup 0ms, import 205ms, tests 1.45s, environment 0ms)[22m
 
 exit=0
 $ npm run smoke
@@ -177,10 +177,11 @@ npm notice 102B dist/types.js.map
 npm notice 346B native/addon.cc
 npm notice 2.3kB native/libghostty_vt_shim.cc
 npm notice 549B native/libghostty_vt_shim.hh
-npm notice 18.1kB native/README.md
-npm notice 34.7kB native/terminal.cc
+npm notice 18.3kB native/README.md
+npm notice 35.5kB native/terminal.cc
 npm notice 2.1kB native/terminal.hh
 npm notice 2.0kB package.json
+npm notice 12.7MB prebuilds/linux-x64/@coder+libghostty-vt-node.node
 npm notice 3.8kB scripts/assemble-prebuilds.mjs
 npm notice 2.9kB scripts/build-libghostty-vt.sh
 npm notice 2.7kB scripts/create-release-tag.mjs
@@ -192,11 +193,11 @@ npm notice Tarball Details
 npm notice name: @coder/libghostty-vt-node
 npm notice version: 0.1.0-beta.1
 npm notice filename: coder-libghostty-vt-node-0.1.0-beta.1.tgz
-npm notice package size: 36.6 kB
-npm notice unpacked size: 134.2 kB
-npm notice shasum: 7454ce26d89bc4bf57c09fc8b95e4f3af5379699
-npm notice integrity: sha512-HN9NJw4gfkESq[...]FI+TqQBKfzbsg==
-npm notice total files: 30
+npm notice package size: 3.7 MB
+npm notice unpacked size: 12.9 MB
+npm notice shasum: 745acaff5d026b0ffa6dd5fca645c2134867e848
+npm notice integrity: sha512-zphUs2JiLK6LS[...]zSI7BzBU3xt6Q==
+npm notice total files: 31
 npm notice
 coder-libghostty-vt-node-0.1.0-beta.1.tgz
 exit=0

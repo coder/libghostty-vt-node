@@ -6,15 +6,15 @@ $ npm test
 
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/home/coder/.mux/src/libghostty-vt-node/tough-seals-think[39m
 
- [32m✓[39m test/load.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
- [32m✓[39m test/terminal.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 21[2mms[22m[39m
- [32m✓[39m test/workers.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 304[2mms[22m[39m
- [32m✓[39m test/mouse-safety.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 436[2mms[22m[39m
- [32m✓[39m test/scripts.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 1261[2mms[22m[39m
+ [32m✓[39m test/load.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m test/terminal.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m test/workers.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m test/mouse-safety.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 309[2mms[22m[39m
+ [32m✓[39m test/scripts.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 952[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
-[2m      Tests [22m [1m[32m72 passed[39m[22m[90m (72)[39m
-[2m   Start at [22m 01:10:03
-[2m   Duration [22m 1.45s[2m (transform 208ms, setup 0ms, import 352ms, tests 2.03s, environment 0ms)[22m
+[2m      Tests [22m [1m[32m73 passed[39m[22m[90m (73)[39m
+[2m   Start at [22m 01:39:39
+[2m   Duration [22m 1.08s[2m (transform 95ms, setup 0ms, import 205ms, tests 1.45s, environment 0ms)[22m
 
 exit=0

@@ -5,7 +5,7 @@ $ npm run build:native
 
 gyp info it worked if it ends with ok
 gyp info using node-gyp@12.4.0
-gyp info using node@22.23.4 | linux | x64
+gyp info using node@26.12.1 | linux | x64
 gyp info find Python using Python version 3.14.4 found at "/usr/bin/python3"
 
 gyp info spawn /usr/bin/python3
@@ -19,12 +19,12 @@ gyp info spawn args '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/b
 gyp info spawn args '-I',
 gyp info spawn args '/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/node_modules/node-gyp/addon.gypi',
 gyp info spawn args '-I',
-gyp info spawn args '/home/coder/.cache/node-gyp/22.23.4/include/node/common.gypi',
+gyp info spawn args '/home/coder/.cache/node-gyp/26.12.1/include/node/common.gypi',
 gyp info spawn args '-Dlibrary=shared_library',
 gyp info spawn args '-Dvisibility=default',
-gyp info spawn args '-Dnode_root_dir=/home/coder/.cache/node-gyp/22.23.4',
+gyp info spawn args '-Dnode_root_dir=/home/coder/.cache/node-gyp/26.12.1',
 gyp info spawn args '-Dnode_gyp_dir=/home/coder/.mux/src/libghostty-vt-node/tough-seals-think/node_modules/node-gyp',
-gyp info spawn args '-Dnode_lib_file=/home/coder/.cache/node-gyp/22.23.4/<(target_arch)/node.lib',
+gyp info spawn args '-Dnode_lib_file=/home/coder/.cache/node-gyp/26.12.1/<(target_arch)/node.lib',
 gyp info spawn args '-Dmodule_root_dir=/home/coder/.mux/src/libghostty-vt-node/tough-seals-think',
 gyp info spawn args '-Dnode_engine=v8',
 gyp info spawn args '--depth=.',
