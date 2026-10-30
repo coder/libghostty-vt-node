@@ -117,8 +117,9 @@ export interface NativeInfo {
    */
   ghosttyVersion?: string;
   /**
-   * The full Ghostty commit that libghostty-vt was built from. Omitted when
-   * libghostty-vt was built without build metadata in its version.
+   * The build metadata of libghostty-vt's version. Builds made by
+   * `npm run build:libghostty`, the published prebuilds included, set it to
+   * the full Ghostty commit. Omitted when the version has no build metadata.
    */
   ghosttyCommit?: string;
   platform: string;
