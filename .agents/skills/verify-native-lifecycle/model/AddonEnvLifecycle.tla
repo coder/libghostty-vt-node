@@ -159,9 +159,10 @@ CreateTerminal(e, t) ==
     /\ handleUse' = NoHandleUse
     /\ UNCHANGED <<env, slot>>
 
-\* ghostty_mouse_encoder_new fails: the constructor frees the terminal, sets
-\* terminal_ = nullptr, and throws. ~TerminalWrap does not run, because the
-\* C++ constructor did not finish. No JS object exists.
+\* ghostty_terminal_set or ghostty_mouse_encoder_new fails: the constructor
+\* frees the terminal once, leaves terminal_ = nullptr, and throws.
+\* ~TerminalWrap does not run, because the C++ constructor did not finish.
+\* No JS object exists.
 CreateFails(e, t) ==
     /\ env[e] = "loaded"
     /\ term[t].js = "none"
