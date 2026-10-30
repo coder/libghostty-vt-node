@@ -32,6 +32,14 @@ fi
 
 git -C "$GHOSTTY_SOURCE_DIR" fetch --depth 1 origin "$GHOSTTY_COMMIT"
 git -C "$GHOSTTY_SOURCE_DIR" checkout --detach "$GHOSTTY_COMMIT"
+ghostty_commit="$(git -C "$GHOSTTY_SOURCE_DIR" rev-parse --verify HEAD)"
+
+lib_version="$(sed -n 's/^const lib_version = "\(.*\)";$/\1/p' "$GHOSTTY_SOURCE_DIR/build.zig")"
+if [[ ! "$lib_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+  echo "error: expected exactly one 'const lib_version = \"<semver>\";' line in $GHOSTTY_SOURCE_DIR/build.zig, with no build metadata" >&2
+  echo "Found: '${lib_version}'" >&2
+  exit 1
+fi
 
 zig_version="$(zig version)"
 required_zig="$(sed -n 's/.*minimum_zig_version = "\(.*\)".*/\1/p' "$GHOSTTY_SOURCE_DIR/build.zig.zon" | head -n 1)"
@@ -46,6 +54,7 @@ zig_args=(
   -Demit-lib-vt=true
   "-Dsimd=$SIMD"
   "-Doptimize=$OPTIMIZE"
+  "-Dlib-version-string=${lib_version}+${ghostty_commit}"
   --prefix "$PREFIX"
   install
 )
@@ -82,7 +91,7 @@ fi
 cat > "$PREFIX/ghostty-source.json" <<JSON
 {
   "repository": "$GHOSTTY_REPO",
-  "commit": "$GHOSTTY_COMMIT",
+  "commit": "$ghostty_commit",
   "zigVersion": "$zig_version",
   "simd": "$SIMD",
   "optimize": "$OPTIMIZE"

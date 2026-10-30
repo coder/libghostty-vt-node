@@ -110,7 +110,17 @@ export interface GhosttyVtTerminal {
 export interface NativeInfo {
   packageVersion: string;
   napiVersion: number;
+  /**
+   * libghostty-vt's own version, not the Ghostty release. Builds made by
+   * `npm run build:libghostty`, the published prebuilds included, end it with
+   * `+<ghosttyCommit>`.
+   */
   ghosttyVersion?: string;
+  /**
+   * The build metadata of libghostty-vt's version. Builds made by
+   * `npm run build:libghostty`, the published prebuilds included, set it to
+   * the full Ghostty commit. Omitted when the version has no build metadata.
+   */
   ghosttyCommit?: string;
   platform: string;
   arch: string;
