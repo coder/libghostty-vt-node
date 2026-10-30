@@ -335,6 +335,46 @@ describeIfNative("GhosttyVtTerminal", () => {
     }
   });
 
+  it("reads every event, modifier, option, and geometry field once", () => {
+    const term = createTerminal({ cols: 80, rows: 24 });
+    try {
+      term.feed("\x1b[?1000h\x1b[?1006h");
+      const reads: Record<string, number> = {};
+      const counted = <T extends object>(values: T): T => {
+        const target = {};
+        for (const [key, value] of Object.entries(values)) {
+          reads[key] = 0;
+          Object.defineProperty(target, key, {
+            enumerable: true,
+            get: () => {
+              reads[key] = (reads[key] ?? 0) + 1;
+              return value;
+            },
+          });
+        }
+        return target as T;
+      };
+      const geometry = counted({
+        screenWidth: 80, screenHeight: 24, cellWidth: 1, cellHeight: 1,
+        paddingTop: 0, paddingBottom: 0, paddingRight: 0, paddingLeft: 0,
+      });
+      const options = counted({ geometry, anyButtonPressed: false, trackLastCell: false });
+      const modifiers = counted({ shift: true, ctrl: false, alt: true });
+      const event = counted({ action: "press", button: "left", x: 3, y: 5, modifiers } as const);
+
+      expect(term.encodeMouse(event, options)).toEqual(Buffer.from("\x1b[<12;4;6M"));
+      expect(reads).toEqual({
+        geometry: 1, anyButtonPressed: 1, trackLastCell: 1,
+        screenWidth: 1, screenHeight: 1, cellWidth: 1, cellHeight: 1,
+        paddingTop: 1, paddingBottom: 1, paddingRight: 1, paddingLeft: 1,
+        action: 1, button: 1, x: 1, y: 1, modifiers: 1,
+        shift: 1, ctrl: 1, alt: 1,
+      });
+    } finally {
+      term.dispose();
+    }
+  });
+
   it("covers button tracking, legacy releases, X10 limits, and UTF-8 coordinates", () => {
     const cases = [
       { mode: "\x1b[?1002h\x1b[?1006h", action: "motion", button: "left", x: 2, expected: Buffer.from("\x1b[<32;3;4M") },
