@@ -189,7 +189,7 @@ Manual dispatch and direct `v*.*.*` tag pushes are available for recovery, but m
 
 ## Dependency Updates
 
-The repository `.npmrc` sets `min-release-age=7`. When `npm install` or `npm update` picks a new version, npm skips every version published less than 7 days ago. A compromised or broken release then has a week to be found and pulled before it can reach `package-lock.json`. The setting needs npm 11.10 or later. The Node version pinned in `mise.toml` ships npm 11.20.
+The repository `.npmrc` sets `min-release-age=7`. When `npm install` or `npm update` picks a new version, npm skips every version published less than 7 days ago. A compromised or broken release then has a week to be found and pulled before it can reach `package-lock.json`. The setting needs npm 11.10 or later, and older npm ignores it without an error. So `devEngines` in `package.json` makes npm 10.9 and later stop with `EBADDEVENGINES` in this checkout when npm is older than 11.10. The Node version pinned in `mise.toml` ships npm 11.20. Packages that depend on this one are not affected, because npm checks `devEngines` only for the project you run it in.
 
 - `npm ci` installs exactly what the lockfile pins. It does not check release age, and neither does `npm install` for packages that the lockfile already pins.
 - `npm update` moves every lockfile entry younger than 7 days back to an older version, without a warning. This can undo a recent Dependabot security fix. Check the lockfile diff for downgrades and run `npm audit` before you commit.
@@ -244,7 +244,7 @@ The package has four layers:
 - The addon can load in the main thread and in each `worker_threads` Worker, because `TerminalWrap::Init` keeps the class constructor in per-env instance data [native/terminal.cc:TerminalWrap::Init].
 - The default Ghostty commit in [scripts/build-libghostty-vt.sh:GHOSTTY_COMMIT] is the commit that "Upstream References" names. Change both together.
 - Build order: `npm ci`, `npm run build:libghostty`, `npm run build:native`, `npm run build`, `npm test`, `npm run smoke` [mise.toml:tasks.ci]. `npm run build:native` fails early when the libghostty-vt header or static library is missing [scripts/resolve-libghostty-vt.mjs:fail].
-- `npm install` and `npm update` pick only dependency versions published at least 7 days ago [.npmrc:min-release-age]. `npm ci` installs the lockfile as pinned.
+- `npm install` and `npm update` pick only dependency versions published at least 7 days ago [.npmrc:min-release-age]. `npm ci` installs the lockfile as pinned. npm older than 11.10 refuses to run here [package.json:devEngines].
 - The npm package ships `dist`, `native`, `scripts`, `binding.gyp`, `prebuilds`, `CHANGELOG.md`, `README.md`, and `LICENSE` [package.json:files].
 - A release tag is `v<version>` from `package.json`. When `RELEASE_BRANCH_NAME` is set and not empty, it must be `release/v<version>` [scripts/create-release-tag.mjs:releaseBranchName]. The tag must point at the checked-out `HEAD` [scripts/create-release-tag.mjs:releaseTargetSha].
 - The npm dist-tag is the lower-cased first prerelease identifier, or `latest` for a plain version. A non-empty `NPM_PUBLISH_TAG` overrides it [scripts/resolve-npm-publish-tag.mjs:prerelease].
