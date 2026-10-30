@@ -5,6 +5,7 @@
 #include <cmath>
 #include <limits>
 #include <stdexcept>
+#include <string>
 
 namespace libghostty_vt_node {
 namespace {
@@ -149,6 +150,18 @@ GhosttyMouseButton ParseMouseButton(Napi::Env env, const Napi::Value& value) {
 bool OptionBool(const Napi::Object& options, const char* name) {
   const Napi::Value value = options.Get(name);
   return value.IsBoolean() && value.As<Napi::Boolean>().Value();
+}
+
+// Set() runs a setter that Object.prototype or Array.prototype can carry, and
+// that JS can dispose the terminal mid-snapshot. Defining the property cannot.
+void DefineValue(Napi::Env env, napi_value object, const char* key, napi_value value) {
+  const napi_property_descriptor descriptor = {
+      key, nullptr, nullptr, nullptr, nullptr, value, napi_default_jsproperty, nullptr};
+  NAPI_THROW_IF_FAILED_VOID(env, napi_define_properties(env, object, 1, &descriptor));
+}
+
+void DefineIndex(Napi::Env env, napi_value array, uint32_t index, napi_value value) {
+  DefineValue(env, array, std::to_string(index).c_str(), value);
 }
 
 GhosttyMods ParseMouseModifiers(Napi::Env env, const Napi::Value& value) {
@@ -472,8 +485,6 @@ Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
 
 Napi::Value TerminalWrap::Snapshot(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
-  RequireTerminal(env);
-
   bool include_scrollback = false;
   bool include_cells = false;
   if (info.Length() > 0 && !info[0].IsUndefined()) {
@@ -484,6 +495,8 @@ Napi::Value TerminalWrap::Snapshot(const Napi::CallbackInfo& info) {
     include_scrollback = OptionBool(options, "includeScrollback");
     include_cells = OptionBool(options, "includeCells");
   }
+  // The Get() reads above can run JS that disposes this terminal.
+  RequireTerminal(env);
 
   try {
     return BuildSnapshot(env, include_scrollback, include_cells);
@@ -600,19 +613,19 @@ Napi::Object TerminalWrap::BuildSnapshot(Napi::Env env, bool include_scrollback,
   for (uint32_t row = 0; row < rows; row++) {
     const std::string text = ReadLine(GHOSTTY_POINT_TAG_ACTIVE, row, include_cells ? &cells : nullptr, env);
     Napi::Object line = Napi::Object::New(env);
-    line.Set("row", Napi::Number::New(env, row));
-    line.Set("text", Napi::String::New(env, text));
-    visible_lines.Set(row, line);
+    DefineValue(env, line, "row", Napi::Number::New(env, row));
+    DefineValue(env, line, "text", Napi::String::New(env, text));
+    DefineIndex(env, visible_lines, row, line);
   }
 
   Napi::Object snapshot = Napi::Object::New(env);
-  snapshot.Set("cols", Napi::Number::New(env, cols));
-  snapshot.Set("rows", Napi::Number::New(env, rows));
-  snapshot.Set("cursorRow", Napi::Number::New(env, cursor_row));
-  snapshot.Set("cursorCol", Napi::Number::New(env, cursor_col));
-  snapshot.Set("cursorVisible", Napi::Boolean::New(env, cursor_visible));
-  snapshot.Set("isAltScreen", Napi::Boolean::New(env, active_screen == GHOSTTY_TERMINAL_SCREEN_ALTERNATE));
-  snapshot.Set("visibleLines", visible_lines);
+  DefineValue(env, snapshot, "cols", Napi::Number::New(env, cols));
+  DefineValue(env, snapshot, "rows", Napi::Number::New(env, rows));
+  DefineValue(env, snapshot, "cursorRow", Napi::Number::New(env, cursor_row));
+  DefineValue(env, snapshot, "cursorCol", Napi::Number::New(env, cursor_col));
+  DefineValue(env, snapshot, "cursorVisible", Napi::Boolean::New(env, cursor_visible));
+  DefineValue(env, snapshot, "isAltScreen", Napi::Boolean::New(env, active_screen == GHOSTTY_TERMINAL_SCREEN_ALTERNATE));
+  DefineValue(env, snapshot, "visibleLines", visible_lines);
 
   if (include_scrollback) {
     size_t scrollback_rows = 0;
@@ -621,15 +634,15 @@ Napi::Object TerminalWrap::BuildSnapshot(Napi::Env env, bool include_scrollback,
       throw std::runtime_error(ResultMessage("ghostty_terminal_get(scrollback rows)", result));
     }
     const uint32_t count = static_cast<uint32_t>(std::min<size_t>(scrollback_rows, std::numeric_limits<uint32_t>::max()));
-    snapshot.Set("scrollbackLines", BuildLines(env, GHOSTTY_POINT_TAG_HISTORY, count, 0));
+    DefineValue(env, snapshot, "scrollbackLines", BuildLines(env, GHOSTTY_POINT_TAG_HISTORY, count, 0));
   }
 
   if (include_cells) {
     Napi::Array cell_array = Napi::Array::New(env, cells.size());
     for (size_t i = 0; i < cells.size(); i++) {
-      cell_array.Set(static_cast<uint32_t>(i), cells[i]);
+      DefineIndex(env, cell_array, static_cast<uint32_t>(i), cells[i]);
     }
-    snapshot.Set("cells", cell_array);
+    DefineValue(env, snapshot, "cells", cell_array);
   }
 
   return snapshot;
@@ -639,9 +652,9 @@ Napi::Array TerminalWrap::BuildLines(Napi::Env env, GhosttyPointTag tag, uint32_
   Napi::Array lines = Napi::Array::New(env, rows);
   for (uint32_t row = 0; row < rows; row++) {
     Napi::Object line = Napi::Object::New(env);
-    line.Set("row", Napi::Number::New(env, static_cast<int64_t>(row) + row_offset));
-    line.Set("text", Napi::String::New(env, ReadLine(tag, row, nullptr, env)));
-    lines.Set(row, line);
+    DefineValue(env, line, "row", Napi::Number::New(env, static_cast<int64_t>(row) + row_offset));
+    DefineValue(env, line, "text", Napi::String::New(env, ReadLine(tag, row, nullptr, env)));
+    DefineIndex(env, lines, row, line);
   }
   return lines;
 }
@@ -735,14 +748,14 @@ Napi::Object TerminalWrap::BuildCellObject(
     GhosttyCell cell,
     const GhosttyGridRef& ref) {
   Napi::Object obj = Napi::Object::New(env);
-  obj.Set("row", Napi::Number::New(env, row));
-  obj.Set("col", Napi::Number::New(env, col));
-  obj.Set("text", Napi::String::New(env, text));
+  DefineValue(env, obj, "row", Napi::Number::New(env, row));
+  DefineValue(env, obj, "col", Napi::Number::New(env, col));
+  DefineValue(env, obj, "text", Napi::String::New(env, text));
 
   GhosttyCellWide wide = GHOSTTY_CELL_WIDE_NARROW;
   GhosttyResult result = ghostty_cell_get(cell, GHOSTTY_CELL_DATA_WIDE, &wide);
   if (result != GHOSTTY_SUCCESS) throw std::runtime_error(ResultMessage("ghostty_cell_get(wide)", result));
-  obj.Set("width", Napi::Number::New(env, wide == GHOSTTY_CELL_WIDE_WIDE ? 2 : 1));
+  DefineValue(env, obj, "width", Napi::Number::New(env, wide == GHOSTTY_CELL_WIDE_WIDE ? 2 : 1));
 
   bool has_styling = false;
   result = ghostty_cell_get(cell, GHOSTTY_CELL_DATA_HAS_STYLING, &has_styling);
@@ -754,19 +767,19 @@ Napi::Object TerminalWrap::BuildCellObject(
   result = ghostty_grid_ref_style(&ref, &style);
   if (result != GHOSTTY_SUCCESS) throw std::runtime_error(ResultMessage("ghostty_grid_ref_style", result));
 
-  if (style.bold) obj.Set("bold", Napi::Boolean::New(env, true));
-  if (style.italic) obj.Set("italic", Napi::Boolean::New(env, true));
-  if (style.underline != 0) obj.Set("underline", Napi::Boolean::New(env, true));
-  if (style.faint) obj.Set("faint", Napi::Boolean::New(env, true));
+  if (style.bold) DefineValue(env, obj, "bold", Napi::Boolean::New(env, true));
+  if (style.italic) DefineValue(env, obj, "italic", Napi::Boolean::New(env, true));
+  if (style.underline != 0) DefineValue(env, obj, "underline", Napi::Boolean::New(env, true));
+  if (style.faint) DefineValue(env, obj, "faint", Napi::Boolean::New(env, true));
   // Raw SGR 7 flag. Foreground and background are reported unswapped.
-  if (style.inverse) obj.Set("inverse", Napi::Boolean::New(env, true));
-  if (style.invisible) obj.Set("invisible", Napi::Boolean::New(env, true));
-  if (style.strikethrough) obj.Set("strikethrough", Napi::Boolean::New(env, true));
+  if (style.inverse) DefineValue(env, obj, "inverse", Napi::Boolean::New(env, true));
+  if (style.invisible) DefineValue(env, obj, "invisible", Napi::Boolean::New(env, true));
+  if (style.strikethrough) DefineValue(env, obj, "strikethrough", Napi::Boolean::New(env, true));
 
   const std::string fg = ResolveStyleColor(style.fg_color);
   const std::string bg = ResolveStyleColor(style.bg_color);
-  if (!fg.empty()) obj.Set("foreground", Napi::String::New(env, fg));
-  if (!bg.empty()) obj.Set("background", Napi::String::New(env, bg));
+  if (!fg.empty()) DefineValue(env, obj, "foreground", Napi::String::New(env, fg));
+  if (!bg.empty()) DefineValue(env, obj, "background", Napi::String::New(env, bg));
 
   return obj;
 }
