@@ -4,6 +4,11 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.3](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.3) - 2026-10-30
+
+## Fixed
+- Prevent `snapshot()` from running arbitrary JavaScript (via accessors on `Object.prototype` / `Array.prototype`) while the native code holds the terminal handle. Snapshot result objects are now built with own data properties (`napi_define_properties`), and both `includeScrollback` and `includeCells` options are read before the disposed-terminal check, so a getter that disposes the terminal mid-call throws `"disposed"` instead of segfaulting or hitting a `SIGABRT` assertion ([#46](https://github.com/coder/libghostty-vt-node/pull/46) by @ThomasK33).
+
 ## [v0.1.0-beta.2](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.2) - 2026-10-30
 
 ## Added
@@ -15,9 +20,7 @@ All notable user-facing changes to this package will be documented in this file.
 ## Changed
 - Pinned Ghostty to `v1.4.0` (and Zig to `0.17.0` for source builds). DECSTR soft resets (`ESC[!p`) now apply, and consumers inherit upstream Ghostty 1.4.0 behavior changes including reflow cursor placement, C0/C1 control characters no longer printing as cells, Unicode 18 width tables, origin-relative CHA/VPA/HPR/VPR, and `formatHtml` no longer appending a trailing newline per page ([#43](https://github.com/coder/libghostty-vt-node/pull/43)).
 - Release scripts now fail closed: tag creation stops on `git ls-remote` failures, prebuild assembly stages into a sibling directory before swapping, and `verify-prebuilds.mjs` sets `PREBUILDS_ONLY=1` and asserts the loaded addon came from `prebuilds/` rather than a stale local build ([#31](https://github.com/coder/libghostty-vt-node/pull/31)).
-- Documentation no longer lists macOS x64 as a published prebuild target ([#4](https://github.com/coder/libghostty-vt-node/pull/4)).
-
-## Fixed
+- Documentation no longer lists macOS x64 as a published prebuild target ([#4](https://github.com/coder/libghostty-vt-node/pull/4)).## Fixed
 - Keep the `TerminalWrap` class reference per Node environment so `createTerminal` works correctly from `worker_threads` Workers and from the main thread after a worker that loaded the addon exits. The previous process-wide static could cause V8 aborts (`Cannot create a handle without a HandleScope`) or segfaults ([#23](https://github.com/coder/libghostty-vt-node/pull/23)).
 - Range-check `cols`, `rows`, and `scrollbackLimit` for `NaN`, infinities, and out-of-range values before casting in the native layer, replacing undefined behavior with a `RangeError` ([#30](https://github.com/coder/libghostty-vt-node/pull/30)).
 
