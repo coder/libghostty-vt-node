@@ -25,7 +25,22 @@ tmp="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
 case "$tmp/" in
   "$ROOT"/*) echo "error: TMPDIR ($tmp) is inside the checkout ($ROOT): set it to a directory outside." >&2; exit 2 ;;
 esac
-RUN_ROOT="$(mktemp -d "$tmp/verify-libghostty-vt-node.XXXXXX")"
+# npm install runs package scripts from RUN_ROOT, and the compiler writes temp
+# files to TMPDIR. Refuse a TMPDIR that another account can change: it, or a
+# directory above it, is owned by another account (root excepted) or writable
+# by group or others without the sticky bit. Children use the checked path.
+node -e '
+  const fs = require("node:fs"), path = require("node:path");
+  for (let dir = process.argv[1]; ; dir = path.dirname(dir)) {
+    const st = fs.statSync(dir);
+    const why = st.uid !== process.getuid() && st.uid !== 0 ? "another account owns"
+      : (st.mode & 0o022) && !(st.mode & 0o1000) ? "group or others can write" : "";
+    if (why) { console.error(`error: TMPDIR ${process.argv[1]} is unsafe: ${why} ${dir}`); process.exit(2); }
+    if (dir === path.dirname(dir)) break;
+  }
+' "$tmp"
+export TMPDIR="$tmp"
+RUN_ROOT="$(mktemp -d "$TMPDIR/verify-libghostty-vt-node.XXXXXX")"
 INSTANCE="$RUN_ROOT/instance"
 EVIDENCE="$RUN_ROOT/evidence"
 
