@@ -9,12 +9,11 @@ All notable user-facing changes to this package will be documented in this file.
 ## Added
 - `encodeMouse(event, options)` on every terminal, backed by Ghostty's mouse-protocol encoder with validation of grid geometry, surface coordinates, and pressed-button state. A new `supportsMouseInput` capability marker lets consumers probe at import time ([#12](https://github.com/coder/libghostty-vt-node/pull/12)).
 - `SnapshotCell` now exposes `faint`, `inverse`, `invisible`, and `strikethrough` SGR attributes, following the same "present only when set" convention as `bold`/`italic`/`underline`. Note that `inverse` is the raw attribute: `foreground`/`background` are not swapped ([#17](https://github.com/coder/libghostty-vt-node/pull/17)).
-- `TerminalSnapshot.cursorVisible: boolean` reflects DECTCEM state (`ESC[?25h` / `ESC[?25l`) ([#17](https://github.com/coder/libghostty-vt-node/pull/17), [#38](https://github.com/coder/libghostty-vt-node/pull/38)).
+- `TerminalSnapshot.cursorVisible: boolean` reflects DECTCEM state (`ESC[?25h` / `ESC[?25l`). The field is required, so code that constructs its own `TerminalSnapshot` objects must set it ([#17](https://github.com/coder/libghostty-vt-node/pull/17), [#38](https://github.com/coder/libghostty-vt-node/pull/38)).
 - EGM contract READMEs for `src/`, `native/`, `scripts/`, and `examples/`, plus Blueprint sections appended to the root README. `native/README.md` and `scripts/README.md` are shipped in the npm tarball ([#29](https://github.com/coder/libghostty-vt-node/pull/29)).
 
 ## Changed
 - Pinned Ghostty to `v1.4.0` (and Zig to `0.17.0` for source builds). DECSTR soft resets (`ESC[!p`) now apply, and consumers inherit upstream Ghostty 1.4.0 behavior changes including reflow cursor placement, C0/C1 control characters no longer printing as cells, Unicode 18 width tables, origin-relative CHA/VPA/HPR/VPR, and `formatHtml` no longer appending a trailing newline per page ([#43](https://github.com/coder/libghostty-vt-node/pull/43)).
-- `TerminalSnapshot.cursorVisible` is now a required `boolean` in the published types. The native binding has always set it; code that constructs its own snapshots must now include the field ([#38](https://github.com/coder/libghostty-vt-node/pull/38)).
 - Release scripts now fail closed: tag creation stops on `git ls-remote` failures, prebuild assembly stages into a sibling directory before swapping, and `verify-prebuilds.mjs` sets `PREBUILDS_ONLY=1` and asserts the loaded addon came from `prebuilds/` rather than a stale local build ([#31](https://github.com/coder/libghostty-vt-node/pull/31)).
 - Documentation no longer lists macOS x64 as a published prebuild target ([#4](https://github.com/coder/libghostty-vt-node/pull/4)).
 
@@ -23,7 +22,6 @@ All notable user-facing changes to this package will be documented in this file.
 - Range-check `cols`, `rows`, and `scrollbackLimit` for `NaN`, infinities, and out-of-range values before casting in the native layer, replacing undefined behavior with a `RangeError` ([#30](https://github.com/coder/libghostty-vt-node/pull/30)).
 - `encodeMouse` now accepts UTF-8 mouse rows above U+FFFF (rows 65503-65534) in mode 1005 rather than throwing a spurious `RangeError`; surrogate guards remain ([#42](https://github.com/coder/libghostty-vt-node/pull/42)).
 - `encodeMouse` now reads each caller field exactly once, so hostile getters cannot pass TypeScript validation with one value and forward another to the native layer ([#41](https://github.com/coder/libghostty-vt-node/pull/41)).
-- Skip the mouse-safety test suite when the native addon is not loadable, matching the other native suites ([#39](https://github.com/coder/libghostty-vt-node/pull/39)).
 
 ## Security
 - Upgraded the repo Node toolchain to 26.12.1 for CVE-2026-111497 (Node2Shell). The published package's `engines.node` floor (`>=20.19`) is unchanged ([#21](https://github.com/coder/libghostty-vt-node/pull/21)).
