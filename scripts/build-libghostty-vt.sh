@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GHOSTTY_REPO="${GHOSTTY_REPO:-https://github.com/ghostty-org/ghostty.git}"
-GHOSTTY_COMMIT="${GHOSTTY_COMMIT:-48ccec182a932c2ec04c344d45a5fc553861cb13}"
+GHOSTTY_COMMIT="${GHOSTTY_COMMIT:-83fb95624b0439ee660c2679b43b38c8b63769cd}"
 GHOSTTY_SOURCE_DIR="${GHOSTTY_SOURCE_DIR:-$ROOT/vendor/ghostty}"
 PREFIX="${LIBGHOSTTY_VT_PREFIX:-$ROOT/vendor/libghostty-vt}"
 SIMD="${LIBGHOSTTY_VT_SIMD:-false}"
@@ -14,7 +14,7 @@ need() {
     echo "error: missing required command '$1'" >&2
     echo "Install it first, then rerun npm run build:libghostty." >&2
     if [[ "$1" == "zig" ]]; then
-      echo "This Ghostty commit requires Zig 0.15.2. With mise: mise install" >&2
+      echo "This Ghostty commit requires Zig 0.17.0. With mise: mise install" >&2
     fi
     exit 1
   fi

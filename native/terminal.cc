@@ -225,17 +225,19 @@ TerminalWrap::TerminalWrap(const Napi::CallbackInfo& info)
     scrollback = NonNegativeSize(env, options.Get("scrollbackLimit"), "scrollbackLimit");
   }
 
-  GhosttyTerminalOptions native_options = {};
-  native_options.cols = cols;
-  native_options.rows = rows;
-  native_options.max_scrollback = scrollback;
-
   GhosttyTerminal created = nullptr;
-  const GhosttyResult result = ghostty_terminal_new(nullptr, &created, native_options);
+  GhosttyResult result = ghostty_terminal_new(nullptr, &created, cols, rows);
   if (result != GHOSTTY_SUCCESS) {
     ThrowResult(env, "ghostty_terminal_new", result);
   }
   assert(created != nullptr);
+  // The byte limit, not the line limit, matches the pre-1.4 max_scrollback,
+  // which Ghostty counted in bytes and which disables scrollback at 0.
+  result = ghostty_terminal_set(created, GHOSTTY_TERMINAL_OPT_SCROLLBACK_MAX_BYTES, &scrollback);
+  if (result != GHOSTTY_SUCCESS) {
+    ghostty_terminal_free(created);
+    ThrowResult(env, "ghostty_terminal_set(scrollback max bytes)", result);
+  }
   terminal_ = created;
 
   GhosttyMouseEncoder mouse_encoder = nullptr;
@@ -383,11 +385,11 @@ Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
   GhosttyTerminal terminal = RequireTerminal(env);
   GhosttyMouseEncoder encoder = RequireMouseEncoder(env);
 
-  bool utf8_mouse = false;
-  const GhosttyResult mode_result = ghostty_terminal_mode_get(
-      terminal, GHOSTTY_MODE_UTF8_MOUSE, &utf8_mouse);
-  if (mode_result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_terminal_mode_get", mode_result);
-  if (utf8_mouse) {
+  GhosttyTerminalModeConfig utf8_mouse = {GHOSTTY_MODE_UTF8_MOUSE, false};
+  const GhosttyResult mode_result =
+      ghostty_terminal_get(terminal, GHOSTTY_TERMINAL_DATA_MODE, &utf8_mouse);
+  if (mode_result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_terminal_get(mode)", mode_result);
+  if (utf8_mouse.value) {
     // Mode bits cannot identify the last selected format. Conservatively guard
     // these exceptional cells whenever 1005 is set, even if another format was
     // selected later. Ordinary geometry and SGR-only large grids are unchanged.

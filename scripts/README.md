@@ -19,8 +19,8 @@ In the `.mjs` scripts, a failed `assert` or a thrown `Error` ends the process wi
 
 ## Invariants
 
-- The default Ghostty commit is `48ccec182a932c2ec04c344d45a5fc553861cb13`. `GHOSTTY_COMMIT` overrides it [scripts/build-libghostty-vt.sh:GHOSTTY_COMMIT].
-- `build-libghostty-vt.sh` exits 1 with `"error: missing required command '<cmd>'"` and `"Install it first, then rerun npm run build:libghostty."` when `git` or `zig` is not on `PATH`. For `zig` it also prints `"This Ghostty commit requires Zig 0.15.2. With mise: mise install"` [scripts/build-libghostty-vt.sh:need].
+- The default Ghostty commit is `83fb95624b0439ee660c2679b43b38c8b63769cd`. `GHOSTTY_COMMIT` overrides it [scripts/build-libghostty-vt.sh:GHOSTTY_COMMIT].
+- `build-libghostty-vt.sh` exits 1 with `"error: missing required command '<cmd>'"` and `"Install it first, then rerun npm run build:libghostty."` when `git` or `zig` is not on `PATH`. For `zig` it also prints `"This Ghostty commit requires Zig 0.17.0. With mise: mise install"` [scripts/build-libghostty-vt.sh:need].
 - `build-libghostty-vt.sh` exits 1 when `zig version` differs from `minimum_zig_version` in Ghostty's `build.zig.zon`. It skips this check when that file names no version [scripts/build-libghostty-vt.sh:required_zig].
 - `build-libghostty-vt.sh` runs `zig build -Demit-lib-vt=true -Dsimd=$SIMD -Doptimize=$OPTIMIZE --prefix $PREFIX install`, with `--sysroot <xcrun --show-sdk-path>` on Darwin when `xcrun` returns a path. A failed build exits 1 [scripts/build-libghostty-vt.sh:zig_args].
 - After the build, `$PREFIX/include/ghostty/vt.h` and `$PREFIX/lib/libghostty-vt.a` must exist. Otherwise the script exits 1 [scripts/build-libghostty-vt.sh:header].
