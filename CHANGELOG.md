@@ -4,6 +4,11 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.4](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.4) - 2026-10-30
+
+## Fixed
+- `getNativeInfo()` now reports the Ghostty source commit the addon was built from. `ghosttyCommit` returns the full SHA (e.g. `"83fb95624b0439ee660c2679b43b38c8b63769cd"`) and `ghosttyVersion` includes it as SemVer build metadata (e.g. `"0.1.0-dev+83fb9562..."`). Before, `ghosttyVersion` was `"0.1.0-dev"` and `ghosttyCommit` was missing. The `NativeInfo` type is unchanged ([#53](https://github.com/coder/libghostty-vt-node/pull/53) by @ThomasK33).
+
 ## [v0.1.0-beta.3](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.3) - 2026-10-30
 
 ## Fixed
