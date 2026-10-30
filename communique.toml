@@ -14,6 +14,7 @@ context = """
 
 [defaults]
 repo = "coder/libghostty-vt-node"
+max_tokens = 16384
 emoji = false
 verify_links = true
 match_style = true
