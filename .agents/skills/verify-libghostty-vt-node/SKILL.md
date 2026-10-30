@@ -70,7 +70,7 @@ t.dispose();
 JS
 ```
 
-Put node flags after the name, for example `$S/drive.sh "$RUN_ROOT" lifecycle-gc --expose-gc`. `drive.sh` prints the journey's stdout, then `--- exit N, evidence in <dir>` on stderr, and it exits with the journey's code. When stdout and stderr share one stream, the exit line can show up out of order: read `exit-code.txt` for the verdict. A crash gives `128 + signal`: `134` for SIGABRT, `139` for SIGSEGV.
+Put node flags after the name, for example `$S/drive.sh "$RUN_ROOT" lifecycle-gc --expose-gc`. `drive.sh` prints the journey's stdout, then `--- exit N, evidence in <dir>` on stderr, and it exits with the journey's code. When stdout and stderr share one stream, the exit line can show up out of order: read `exit-code.txt` for the verdict. A crash gives `128 + signal`: `134` for SIGABRT, `139` for SIGSEGV. When `drive.sh` cannot save the journey or `command.txt`, it exits `2` before node runs, and the journey has no `exit-code.txt`.
 
 The map in [`features/README.md`](features/README.md) has a literal journey for each sub-feature. Read the index, then use the matching feature file.
 
