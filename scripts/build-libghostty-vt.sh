@@ -8,6 +8,10 @@ GHOSTTY_SOURCE_DIR="${GHOSTTY_SOURCE_DIR:-$ROOT/vendor/ghostty}"
 PREFIX="${LIBGHOSTTY_VT_PREFIX:-$ROOT/vendor/libghostty-vt}"
 SIMD="${LIBGHOSTTY_VT_SIMD:-false}"
 OPTIMIZE="${LIBGHOSTTY_VT_OPTIMIZE:-ReleaseFast}"
+# Prebuilds must run on any CPU of their architecture. Without -Dcpu, Zig
+# targets the build machine, and an AVX-512 runner makes a library that dies
+# with SIGILL on CPUs without AVX-512.
+CPU="${LIBGHOSTTY_VT_CPU:-baseline}"
 
 need() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -54,6 +58,7 @@ zig_args=(
   -Demit-lib-vt=true
   "-Dsimd=$SIMD"
   "-Doptimize=$OPTIMIZE"
+  "-Dcpu=$CPU"
   "-Dlib-version-string=${lib_version}+${ghostty_commit}"
   --prefix "$PREFIX"
   install
@@ -94,6 +99,7 @@ cat > "$PREFIX/ghostty-source.json" <<JSON
   "commit": "$ghostty_commit",
   "zigVersion": "$zig_version",
   "simd": "$SIMD",
+  "cpu": "$CPU",
   "optimize": "$OPTIMIZE"
 }
 JSON

@@ -4,6 +4,9 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## Fixed
+- The `linux-x64` prebuild no longer crashes with `Illegal instruction` (SIGILL) on CPUs without AVX-512. `v0.1.0-beta.4` was built for the release runner's CPU, so loading it and creating a terminal failed on many x86-64 machines and CI runners. libghostty-vt now builds with Zig's `-Dcpu=baseline` (override with `LIBGHOSTTY_VT_CPU`), and CI and the release workflow run the smoke example on an emulated generic x86-64 CPU.
+
 ## [v0.1.0-beta.4](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.4) - 2026-10-30
 
 ## Fixed

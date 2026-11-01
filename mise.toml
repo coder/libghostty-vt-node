@@ -37,6 +37,10 @@ run = [
   "npm pack --dry-run",
 ]
 
+[tasks.check-baseline-cpu]
+description = "Run the smoke example under an emulated x86-64 baseline CPU (Linux x86_64, needs qemu-user)."
+run = "scripts/check-baseline-cpu.sh"
+
 [tasks.assemble-prebuilds]
 description = "Assemble per-platform GitHub Actions prebuild artifacts into npm package layout."
 run = "npm run assemble:prebuilds"
