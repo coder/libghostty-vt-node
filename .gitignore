@@ -9,6 +9,7 @@ vendor/
 .zig-cache/
 zig-out/
 *.log
+qemu_*.core
 !dogfood/bootstrap/session.log
 *.tsbuildinfo
 coverage/

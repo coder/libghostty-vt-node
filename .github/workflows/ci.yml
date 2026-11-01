@@ -30,7 +30,7 @@ jobs:
             os: ubuntu-24.04-arm
             task: ci
           - target: macos-arm64
-            os: macos-14
+            os: macos-15
             task: ci
           - target: linux-x64-ubsan
             os: ubuntu-latest
@@ -39,3 +39,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
       - run: mise run ${{ matrix.task }}
+      # GitHub's x64 runners differ in CPU features, so a passing run proves
+      # nothing about older CPUs. Run the addon on an emulated baseline CPU.
+      - if: matrix.target == 'linux-x64'
+        run: sudo apt-get update && sudo apt-get install -y qemu-user
+      - if: matrix.target == 'linux-x64'
+        run: mise run check-baseline-cpu
+        # The runner's system libraries come from Ubuntu's amd64v3 variant,
+        # and Node without the addon dies on qemu64 there. Haswell (x86-64-v3)
+        # has AVX2 and no AVX-512, which still catches the beta.4 crash.
+        env:
+          QEMU_CPU: Haswell

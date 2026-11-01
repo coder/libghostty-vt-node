@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Runs examples/smoke.ts in one Node process under qemu-user with a generic
+# x86-64 CPU, so an addon that executes instructions newer than the x86-64
+# baseline (such as AVX-512) fails here instead of on users' machines.
+# Set PREBUILDS_ONLY=1 to check prebuilds/ instead of build/Release.
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+QEMU_CPU="${QEMU_CPU:-qemu64}"
+
+if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
+  echo "error: check-baseline-cpu needs Linux on x86_64, found $(uname -s) $(uname -m)" >&2
+  exit 2
+fi
+
+qemu="$(command -v qemu-x86_64-static || command -v qemu-x86_64 || true)"
+if [[ -z "$qemu" ]]; then
+  echo "error: missing qemu-x86_64-static or qemu-x86_64" >&2
+  echo "Install it first, for example: sudo apt-get install qemu-user" >&2
+  exit 2
+fi
+
+# qemu-user emulates only the binary it starts. A version-manager shim (mise,
+# nvm, volta) would exec the real node natively and the check would pass on
+# any addon, so start the real binary.
+node_bin="$(node -p process.execPath)"
+
+# Control: if Node or the system libraries alone need a newer CPU (Ubuntu's
+# amd64v3 variant builds them for x86-64-v3), the host cannot emulate
+# QEMU_CPU and a failure says nothing about the addon.
+if ! "$qemu" -cpu "$QEMU_CPU" "$node_bin" -e 0; then
+  echo "error: node without the addon fails on an emulated $QEMU_CPU CPU, so this host cannot run the check with that CPU" >&2
+  echo "Pick an older-than-host CPU that node runs on, for example QEMU_CPU=Haswell" >&2
+  exit 2
+fi
+
+cd "$ROOT"
+echo "Running examples/smoke.ts with $node_bin under $qemu -cpu $QEMU_CPU"
+if ! "$qemu" -cpu "$QEMU_CPU" "$node_bin" --import tsx examples/smoke.ts; then
+  echo "error: the addon failed on a $QEMU_CPU CPU; it likely uses instructions newer than the x86-64 baseline" >&2
+  echo "Build libghostty-vt with LIBGHOSTTY_VT_CPU=baseline (the default) and rebuild the addon." >&2
+  exit 1
+fi
