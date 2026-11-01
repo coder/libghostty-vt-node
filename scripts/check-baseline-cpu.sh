@@ -26,6 +26,15 @@ fi
 # any addon, so start the real binary.
 node_bin="$(node -p process.execPath)"
 
+# Control: if Node or the system libraries alone need a newer CPU (Ubuntu's
+# amd64v3 variant builds them for x86-64-v3), the host cannot emulate
+# QEMU_CPU and a failure says nothing about the addon.
+if ! "$qemu" -cpu "$QEMU_CPU" "$node_bin" -e 0; then
+  echo "error: node without the addon fails on an emulated $QEMU_CPU CPU, so this host cannot run the check with that CPU" >&2
+  echo "Pick an older-than-host CPU that node runs on, for example QEMU_CPU=Haswell" >&2
+  exit 2
+fi
+
 cd "$ROOT"
 echo "Running examples/smoke.ts with $node_bin under $qemu -cpu $QEMU_CPU"
 if ! "$qemu" -cpu "$QEMU_CPU" "$node_bin" --import tsx examples/smoke.ts; then
