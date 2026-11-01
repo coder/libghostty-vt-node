@@ -4,8 +4,13 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.5](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.5) - 2026-11-01
+
 ## Fixed
 - The `linux-x64` prebuild no longer crashes with `Illegal instruction` (SIGILL) on CPUs without AVX-512. `v0.1.0-beta.4` was built for the release runner's CPU, so loading it and creating a terminal failed on many x86-64 machines and CI runners. libghostty-vt now builds with Zig's `-Dcpu=baseline` (override with `LIBGHOSTTY_VT_CPU`), and CI and the release workflow run the smoke example on an emulated Haswell CPU, which has AVX2 but no AVX-512 ([#55](https://github.com/coder/libghostty-vt-node/pull/55) by @ThomasK33).
+
+## Changed
+- The `macos-arm64` prebuild is now produced on `macos-15` runners, since GitHub is retiring `macos-14` ([#55](https://github.com/coder/libghostty-vt-node/pull/55) by @ThomasK33).
 
 ## [v0.1.0-beta.4](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.4) - 2026-10-30
 
