@@ -30,7 +30,7 @@ jobs:
             os: ubuntu-24.04-arm
             task: ci
           - target: macos-arm64
-            os: macos-14
+            os: macos-15
             task: ci
           - target: linux-x64-ubsan
             os: ubuntu-latest
