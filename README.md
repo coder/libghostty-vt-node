@@ -122,7 +122,7 @@ npm test
 npm run smoke
 ```
 
-`npm run build:libghostty` fetches the pinned Ghostty commit into `vendor/ghostty` and installs a static `libghostty-vt` into `vendor/libghostty-vt`. The default uses `-Dsimd=false` for a dependency-minimal static library. Set `LIBGHOSTTY_VT_SIMD=true` to build SIMD support when your build environment supports it. The build targets the generic `baseline` CPU of the architecture, so the library runs on older CPUs. Set `LIBGHOSTTY_VT_CPU=native` for a local build tuned to your machine; do not ship it.
+`npm run build:libghostty` fetches the pinned Ghostty commit into `vendor/ghostty` and installs a static `libghostty-vt` into `vendor/libghostty-vt`. The default uses `-Dsimd=false` for a dependency-minimal static library. Set `LIBGHOSTTY_VT_SIMD=true` to build SIMD support when your build environment supports it. The build targets the generic `baseline` CPU of the architecture, so the library runs on older CPUs. Set `LIBGHOSTTY_VT_CPU=native` for a local Linux build tuned to your machine; do not ship it. On macOS, Ghostty's build always targets a generic macOS CPU and ignores `LIBGHOSTTY_VT_CPU`.
 
 You can also provide an existing install:
 
