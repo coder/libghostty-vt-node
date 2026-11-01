@@ -4,15 +4,18 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.5](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.5) - 2026-11-01
+
 ## Fixed
-- The `linux-x64` prebuild no longer crashes with `Illegal instruction` (SIGILL) on CPUs without AVX-512. `v0.1.0-beta.4` was built for the release runner's CPU, so loading it and creating a terminal failed on many x86-64 machines and CI runners. libghostty-vt now builds with Zig's `-Dcpu=baseline` (override with `LIBGHOSTTY_VT_CPU`), and CI and the release workflow run the smoke example on an emulated Haswell CPU, which has AVX2 but no AVX-512 ([#55](https://github.com/coder/libghostty-vt-node/pull/55) by @ThomasK33).
+- The `linux-x64` prebuild no longer crashes with `Illegal instruction` (SIGILL) on CPUs without AVX-512. `v0.1.0-beta.4` was built for the release runner's CPU, so loading the addon and creating a terminal failed on many x86-64 machines and CI runners. libghostty-vt now builds with Zig's `-Dcpu=baseline` (override with `LIBGHOSTTY_VT_CPU`), and CI and the release workflow run the smoke example on an emulated Haswell CPU (AVX2, no AVX-512) before uploading prebuilds ([#55](https://github.com/coder/libghostty-vt-node/pull/55) by @ThomasK33).
+
+## Changed
+- The `macos-arm64` prebuild is now produced on `macos-15` runners, since GitHub is retiring `macos-14` ([#55](https://github.com/coder/libghostty-vt-node/pull/55) by @ThomasK33).
 
 ## [v0.1.0-beta.4](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.4) - 2026-10-30
 
 ## Fixed
-- `getNativeInfo()` now reports the Ghostty source commit the addon was built from. `ghosttyCommit` returns the full SHA (e.g. `"83fb95624b0439ee660c2679b43b38c8b63769cd"`) and `ghosttyVersion` includes it as SemVer build metadata (e.g. `"0.1.0-dev+83fb9562..."`). Before, `ghosttyVersion` was `"0.1.0-dev"` and `ghosttyCommit` was missing. The `NativeInfo` type is unchanged ([#53](https://github.com/coder/libghostty-vt-node/pull/53) by @ThomasK33).
-
-## [v0.1.0-beta.3](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.3) - 2026-10-30
+- `getNativeInfo()` now reports the Ghostty source commit the addon was built from. `ghosttyCommit` returns the full SHA (e.g. `"83fb95624b0439ee660c2679b43b38c8b63769cd"`) and `ghosttyVersion` includes it as SemVer build metadata (e.g. `"0.1.0-dev+83fb9562..."`). Before, `ghosttyVersion` was `"0.1.0-dev"` and `ghosttyCommit` was missing. The `NativeInfo` type is unchanged ([#53](https://github.com/coder/libghostty-vt-node/pull/53) by @ThomasK33).## [v0.1.0-beta.3](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.3) - 2026-10-30
 
 ## Fixed
 - Prevent `snapshot()` from running arbitrary JavaScript (via accessors on `Object.prototype` / `Array.prototype`) while the native code holds the terminal handle. Snapshot result objects are now built with own data properties (`napi_define_properties`), and both `includeScrollback` and `includeCells` options are read before the disposed-terminal check, so a getter that disposes the terminal during that read throws "GhosttyVtTerminal has been disposed". Before, such a setter (for example on `row` or `text`) crashed Node with a segfault or an assertion abort, and such a getter aborted it on an assertion ([#46](https://github.com/coder/libghostty-vt-node/pull/46) by @ThomasK33).
