@@ -38,7 +38,7 @@ run = [
 ]
 
 [tasks.check-baseline-cpu]
-description = "Run the smoke example under an emulated x86-64 baseline CPU (Linux x86_64, needs qemu-user)."
+description = "Run the smoke example under an emulated x86-64 baseline CPU (Linux x86_64, needs qemu-user, or Docker with BASELINE_CPU_IMAGE)."
 run = "scripts/check-baseline-cpu.sh"
 
 [tasks.assemble-prebuilds]

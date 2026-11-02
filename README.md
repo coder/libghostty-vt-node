@@ -122,7 +122,7 @@ npm test
 npm run smoke
 ```
 
-`npm run build:libghostty` fetches the pinned Ghostty commit into `vendor/ghostty` and installs a static `libghostty-vt` into `vendor/libghostty-vt`. The default uses `-Dsimd=false` for a dependency-minimal static library. Set `LIBGHOSTTY_VT_SIMD=true` to build SIMD support when your build environment supports it. The build targets the generic `baseline` CPU of the architecture, so the library runs on older CPUs. On Linux x64, `binding.gyp` also compiles the addon with `-march=x86-64`, because g++ on Ubuntu's amd64v3 variant (`ubuntu-latest` runners) defaults to x86-64-v3. Set `LIBGHOSTTY_VT_CPU=native` for a local Linux build tuned to your machine; do not ship it. On macOS, Ghostty's build always targets a generic macOS CPU and ignores `LIBGHOSTTY_VT_CPU`.
+`npm run build:libghostty` fetches the pinned Ghostty commit into `vendor/ghostty` and installs a static `libghostty-vt` into `vendor/libghostty-vt`. The default uses `-Dsimd=false` for a dependency-minimal static library. Set `LIBGHOSTTY_VT_SIMD=true` to build SIMD support when your build environment supports it. The build targets the generic `baseline` CPU of the architecture, so the library runs on older CPUs. Set `LIBGHOSTTY_VT_CPU=native` for a local Linux build of the library tuned to your machine; do not ship it. On macOS, Ghostty's build always targets a generic macOS CPU and ignores `LIBGHOSTTY_VT_CPU`. On Linux x64, `binding.gyp` compiles the addon itself with `-march=x86-64`, because g++ on Ubuntu's amd64v3 variant (`ubuntu-latest` runners) defaults to x86-64-v3. `LIBGHOSTTY_VT_CPU` does not change the addon flags.
 
 You can also provide an existing install:
 
@@ -161,7 +161,7 @@ Default published prebuild targets:
 - Linux arm64
 - macOS arm64
 
-The Linux x64 prebuild runs on any x86-64 CPU, including CPUs without AVX2 (the x86-64 baseline, also called x86-64-v1). CI and the publish workflow run it on an emulated `qemu64` CPU to check this.
+The Linux x64 prebuild targets the x86-64 baseline (x86-64-v1), so it runs on CPUs without AVX2. The compiler flags set that target. CI runs the built addon, and the release workflows run the prebuild, on an emulated `qemu64` CPU, which has no AVX, AVX2 or SSSE3.
 
 Windows is documented as unsupported for the initial package. Ghostty has C API support for Windows, but this package should only enable Windows after the build and prebuild path is verified.
 

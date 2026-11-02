@@ -26,7 +26,7 @@ node_bin="$(node -p process.execPath)"
 # brings x86-64 baseline libraries. Node needs libatomic1, which the Ubuntu
 # base image lacks.
 if [[ -n "${BASELINE_CPU_IMAGE:-}" ]]; then
-  exec docker run --rm \
+  exec docker run --rm --ulimit core=0 \
     -v "$ROOT:$ROOT" -v "$node_bin:$node_bin:ro" -w "$ROOT" \
     -e QEMU_CPU -e PREBUILDS_ONLY -e PATH="$(dirname "$node_bin"):/usr/sbin:/usr/bin:/sbin:/bin" \
     "$BASELINE_CPU_IMAGE" sh -c '
