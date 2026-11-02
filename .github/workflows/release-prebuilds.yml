@@ -32,16 +32,14 @@ jobs:
       - run: mise run release-prebuilds
       # The runner's CPU decides nothing here: the prebuild must run on a
       # generic x86-64 CPU, as users' machines can lack AVX-512 or AVX2.
-      - if: matrix.target == 'linux-x64'
-        run: sudo apt-get update && sudo apt-get install -y qemu-user
+      # The runner's system libraries come from Ubuntu's amd64v3 variant, and
+      # Node without the addon dies on qemu64 there, so the check runs in an
+      # ubuntu:24.04 container, whose libraries target the x86-64 baseline.
       - if: matrix.target == 'linux-x64'
         run: mise run check-baseline-cpu
-        # The runner's system libraries come from Ubuntu's amd64v3 variant,
-        # and Node without the addon dies on qemu64 there. Haswell (x86-64-v3)
-        # has AVX2 and no AVX-512, which still catches the beta.4 crash.
         env:
+          BASELINE_CPU_IMAGE: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
           PREBUILDS_ONLY: "1"
-          QEMU_CPU: Haswell
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilds-${{ matrix.target }}

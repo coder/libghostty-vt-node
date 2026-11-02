@@ -11,7 +11,7 @@ Build ([`binding.gyp`](../binding.gyp)):
 - Target `libghostty_vt_node` with sources `native/addon.cc`, `native/libghostty_vt_shim.cc`, and `native/terminal.cc` [binding.gyp:target_name]
 - Include dirs: `require('node-addon-api').include` and the output of `node scripts/resolve-libghostty-vt.mjs include`. Dependency: `require('node-addon-api').gyp` [binding.gyp:include_dirs]
 - Library: the output of `node scripts/resolve-libghostty-vt.mjs library`, the path of the static archive (`libghostty-vt.a`, or `ghostty-vt-static.lib` on win32). See [`scripts/`](../scripts/README.md) [binding.gyp:libraries]
-- Defines `NAPI_VERSION=8`, `NAPI_CPP_EXCEPTIONS`, and `GHOSTTY_STATIC`. C++ flags are `-std=c++17 -fexceptions` (on macOS through `xcode_settings`, with `libc++`) [binding.gyp:defines]
+- Defines `NAPI_VERSION=8`, `NAPI_CPP_EXCEPTIONS`, and `GHOSTTY_STATIC`. C++ flags are `-std=c++17 -fexceptions` (on macOS through `xcode_settings`, with `libc++`), plus `-march=x86-64` on Linux x64, so the addon runs on any x86-64 CPU whatever the compiler's default target is [binding.gyp:defines] [binding.gyp:target_arch]
 
 JavaScript exports:
 

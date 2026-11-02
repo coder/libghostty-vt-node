@@ -45,6 +45,14 @@
               "-fexceptions"
             ]
           }
+        ],
+        [
+          "OS=='linux' and target_arch=='x64'",
+          {
+            "cflags_cc": [
+              "-march=x86-64"
+            ]
+          }
         ]
       ]
     }
