@@ -56,6 +56,6 @@ cd "$ROOT"
 echo "Running examples/smoke.ts with $node_bin under $qemu -cpu $QEMU_CPU"
 if ! "$qemu" -cpu "$QEMU_CPU" "$node_bin" --import tsx examples/smoke.ts; then
   echo "error: the addon failed on a $QEMU_CPU CPU; it likely uses instructions newer than the x86-64 baseline" >&2
-  echo "Build libghostty-vt with LIBGHOSTTY_VT_CPU=baseline (the default) and rebuild the addon." >&2
+  echo "Build libghostty-vt with LIBGHOSTTY_VT_CPU=baseline (the default), and rebuild the addon with no -march newer than x86-64 (binding.gyp sets -march=x86-64)." >&2
   exit 1
 fi
