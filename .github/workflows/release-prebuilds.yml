@@ -38,7 +38,7 @@ jobs:
       - if: matrix.target == 'linux-x64'
         run: mise run check-baseline-cpu
         env:
-          BASELINE_CPU_IMAGE: ubuntu:24.04
+          BASELINE_CPU_IMAGE: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
           PREBUILDS_ONLY: "1"
       - uses: actions/upload-artifact@v4
         with:

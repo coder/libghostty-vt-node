@@ -24,10 +24,11 @@ node_bin="$(node -p process.execPath)"
 # Ubuntu's amd64v3 variant (ubuntu-latest since 26.04) builds the system
 # libraries for x86-64-v3, so there Node itself dies on qemu64. The image
 # brings x86-64 baseline libraries. Node needs libatomic1, which the Ubuntu
-# base image lacks.
+# base image lacks. The repository is mounted read-only, so the image cannot
+# change the addon or prebuilds/ that later steps ship.
 if [[ -n "${BASELINE_CPU_IMAGE:-}" ]]; then
   exec docker run --rm --ulimit core=0 \
-    -v "$ROOT:$ROOT" -v "$node_bin:$node_bin:ro" -w "$ROOT" \
+    -v "$ROOT:$ROOT:ro" -v "$node_bin:$node_bin:ro" -w "$ROOT" \
     -e QEMU_CPU -e PREBUILDS_ONLY -e PATH="$(dirname "$node_bin"):/usr/sbin:/usr/bin:/sbin:/bin" \
     "$BASELINE_CPU_IMAGE" sh -c '
       { apt-get update -qq &&
