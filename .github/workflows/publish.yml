@@ -50,15 +50,13 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.ref }}
       - uses: jdx/mise-action@v3
       - run: mise run release-prebuilds
-      # These are the prebuilds that npm ships, so run them on an emulated CPU
-      # without AVX-512 before upload. Haswell, not qemu64: see release-prebuilds.yml.
-      - if: matrix.target == 'linux-x64'
-        run: sudo apt-get update && sudo apt-get install -y qemu-user
+      # These are the prebuilds that npm ships, so run them on an emulated
+      # baseline x86-64 CPU before upload. The container: see release-prebuilds.yml.
       - if: matrix.target == 'linux-x64'
         run: mise run check-baseline-cpu
         env:
+          BASELINE_CPU_IMAGE: ubuntu:24.04
           PREBUILDS_ONLY: "1"
-          QEMU_CPU: Haswell
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilds-${{ matrix.target }}
