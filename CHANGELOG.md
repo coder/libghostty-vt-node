@@ -4,6 +4,11 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.6](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.6) - 2026-11-02
+
+## Fixed
+- The `linux-x64` prebuild no longer crashes with `Illegal instruction` (SIGILL) on CPUs without AVX2. `binding.gyp` now passes `-march=x86-64` on Linux x64 so the addon's own C++ is compiled for the x86-64 baseline, independent of the build host's compiler default (g++ on Ubuntu's amd64v3 variant defaults to `-march=x86-64-v3`). The `check-baseline-cpu` CI task now runs in an `ubuntu:24.04` container on an emulated `qemu64` CPU, catching this class of regression instead of the Haswell check that let AVX2 through ([#58](https://github.com/coder/libghostty-vt-node/pull/58) by @ThomasK33, fixes [#57](https://github.com/coder/libghostty-vt-node/issues/57)).
+
 ## [v0.1.0-beta.5](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.5) - 2026-11-01
 
 ## Fixed
