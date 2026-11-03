@@ -4,6 +4,11 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.7](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.7) - 2026-11-03
+
+## Fixed
+- `encodeMouse` now preserves same-cell motion deduplication across `feed()` output that leaves the negotiated mouse tracking mode and format unchanged, matching real terminal behavior. Previously, any non-empty `feed()` caused the next mouse motion to the already-reported cell to be re-reported, so programs that echoed mouse events saw duplicate motion reports for the same cell ([#60](https://github.com/coder/libghostty-vt-node/pull/60) by @ThomasK33).
+
 ## [v0.1.0-beta.6](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.6) - 2026-11-02
 
 ## Fixed
