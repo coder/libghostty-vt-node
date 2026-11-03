@@ -303,6 +303,109 @@ describeIfNative("GhosttyVtTerminal", () => {
     }
   });
 
+  it("keeps same-cell motion deduplication across output that leaves mouse modes unchanged", () => {
+    const cases = [
+      { mode: "\x1b[?1003h", event: { action: "motion", x: 2, y: 3 }, expected: "\x1b[MC#$" },
+      { mode: "\x1b[?1003h\x1b[?1005h", event: { action: "motion", x: 2, y: 3 }, expected: "\x1b[MC#$" },
+      { mode: "\x1b[?1003h\x1b[?1006h", event: { action: "motion", x: 2, y: 3 }, expected: "\x1b[<35;3;4M" },
+      { mode: "\x1b[?1003h\x1b[?1015h", event: { action: "motion", x: 2, y: 3 }, expected: "\x1b[67;3;4M" },
+      {
+        mode: "\x1b[?1002h\x1b[?1006h",
+        event: { action: "motion", button: "left", x: 2, y: 3 },
+        expected: "\x1b[<32;3;4M",
+      },
+    ] as const;
+    const options = { geometry: unitGeometry, trackLastCell: true };
+
+    for (const { mode, event, expected } of cases) {
+      const term = createTerminal({ cols: 80, rows: 24 });
+      try {
+        term.feed(mode);
+        expect(term.encodeMouse(event, options), mode).toEqual(Buffer.from(expected));
+        for (const output of ["plain text\r\n", "\x1b[31mred\x1b[0m\x1b[2;5H", mode]) {
+          term.feed(output);
+          expect(term.encodeMouse(event, options), `${mode} then ${JSON.stringify(output)}`).toHaveLength(0);
+        }
+        expect(term.encodeMouse({ ...event, x: 3 }, options), mode).not.toHaveLength(0);
+      } finally {
+        term.dispose();
+      }
+    }
+  });
+
+  it("resets same-cell motion deduplication when output changes the tracking mode or format", () => {
+    const motion = { action: "motion", x: 2, y: 3 } as const;
+    const drag = { action: "motion", button: "left", x: 2, y: 3 } as const;
+    const steps = [
+      { output: "\x1b[?1003h\x1b[?1006h", event: motion, expected: "\x1b[<35;3;4M" },
+      { output: "", event: motion, expected: "" },
+      { output: "\x1b[?1015h", event: motion, expected: "\x1b[67;3;4M" },
+      { output: "\x1b[?1015l\x1b[?1006h", event: motion, expected: "\x1b[<35;3;4M" },
+      { output: "", event: drag, expected: "" },
+      { output: "\x1b[?1002h", event: drag, expected: "\x1b[<32;3;4M" },
+      { output: "\x1b[?1003h", event: drag, expected: "\x1b[<32;3;4M" },
+      { output: "\x1b[?1000h", event: motion, expected: "" },
+      // Modes 1000, 1002, and 1003 are all set before and after this output,
+      // but it switches the tracking mode from normal back to any.
+      { output: "\x1b[?1003h", event: motion, expected: "\x1b[<35;3;4M" },
+    ];
+
+    const term = createTerminal({ cols: 80, rows: 24 });
+    try {
+      for (const [index, { output, event, expected }] of steps.entries()) {
+        term.feed(output);
+        expect(
+          term.encodeMouse(event, { geometry: unitGeometry, trackLastCell: true }),
+          `step ${index}: ${JSON.stringify(output)}`,
+        ).toEqual(Buffer.from(expected));
+      }
+    } finally {
+      term.dispose();
+    }
+  });
+
+  it("encodes like a fresh terminal after output switches between any two mouse modes", () => {
+    const trackingModes = ["", "\x1b[?9h", "\x1b[?1000h", "\x1b[?1002h", "\x1b[?1003h"];
+    const formats = ["", "\x1b[?1005h", "\x1b[?1006h", "\x1b[?1015h", "\x1b[?1016h"];
+    const modes = trackingModes.flatMap((tracking) => formats.map((format) => tracking + format));
+    const allOff = "\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1005l\x1b[?1006l\x1b[?1015l\x1b[?1016l";
+    const events = [
+      { action: "press", button: "left", x: 99, y: 3, modifiers: { ctrl: true } },
+      { action: "release", button: "left", x: 2, y: 3 },
+      { action: "press", button: "four", x: 2, y: 3 },
+      { action: "motion", button: "left", x: 4, y: 3 },
+      { action: "motion", x: 5, y: 3 },
+    ] as const;
+    const options = { geometry: { ...unitGeometry, screenWidth: 300 } };
+    const encodeAll = (term: ReturnType<typeof createTerminal>) =>
+      events.map((event) => term.encodeMouse(event, options));
+
+    const expected = new Map<string, Buffer[]>();
+    for (const mode of modes) {
+      const fresh = createTerminal({ cols: 300, rows: 24 });
+      try {
+        fresh.feed(mode);
+        expected.set(mode, encodeAll(fresh));
+      } finally {
+        fresh.dispose();
+      }
+    }
+
+    const term = createTerminal({ cols: 300, rows: 24 });
+    try {
+      for (const from of modes) {
+        for (const to of modes) {
+          term.feed(allOff + from);
+          expect(encodeAll(term), JSON.stringify(from)).toEqual(expected.get(from));
+          term.feed(allOff + to);
+          expect(encodeAll(term), `${JSON.stringify(from)} to ${JSON.stringify(to)}`).toEqual(expected.get(to));
+        }
+      }
+    } finally {
+      term.dispose();
+    }
+  });
+
   it("encodes the event and geometry values it validated when getters change", () => {
     const term = createTerminal({ cols: 80, rows: 24 });
     try {

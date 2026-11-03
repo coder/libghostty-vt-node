@@ -94,9 +94,12 @@ coordinates whose encoded value would be a Unicode surrogate. This conservative
 guard applies while 1005 remains set even if another mouse format was selected
 later.
 
-With the pinned Ghostty version, any non-empty `feed()` resets motion
-deduplication when the next mouse event refreshes negotiated modes. Geometry
-changes also reset it. SGR-pixels reports motion even within the same cell.
+Motion deduplication survives `feed()` output that leaves the negotiated
+tracking mode and format unchanged, as in a real terminal. It resets when the
+output changes the tracking mode or format, and when the geometry changes.
+`encodeMouse` compares the mode with the one the previous call used, so output
+that switches the mode and back between two calls does not reset it.
+SGR-pixels reports motion even within the same cell.
 
 Buttons `four`, `five`, `six`, and `seven` conventionally represent wheel up,
 wheel down, wheel left, and wheel right. The binding keeps Ghostty's names at

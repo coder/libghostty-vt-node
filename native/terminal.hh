@@ -43,6 +43,8 @@ class TerminalWrap final : public Napi::ObjectWrap<TerminalWrap> {
   GhosttyTerminal terminal_ = nullptr;
   GhosttyMouseEncoder mouse_encoder_ = nullptr;
   bool mouse_modes_dirty_ = true;
+  // MouseModesSignature at the last mouse mode reload. Empty before the first.
+  std::string mouse_modes_signature_;
   bool mouse_size_configured_ = false;
   GhosttyMouseEncoderSize mouse_size_ = {};
 };
