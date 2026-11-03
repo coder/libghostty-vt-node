@@ -4,14 +4,17 @@ All notable user-facing changes to this package will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0-beta.7](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.7) - 2026-11-03
+
+## Fixed
+- `encodeMouse` now preserves same-cell motion deduplication across `feed()` output that leaves the negotiated mouse tracking mode and format unchanged, matching real terminal behavior. Previously, any non-empty `feed()` caused the next mouse motion to the already-reported cell to be re-reported, so programs that echoed mouse events saw duplicate motion reports for the same cell ([#60](https://github.com/coder/libghostty-vt-node/pull/60) by @ThomasK33).
+
 ## [v0.1.0-beta.6](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.6) - 2026-11-02
 
 ## Fixed
 - The `linux-x64` prebuild no longer crashes with `Illegal instruction` (SIGILL) on CPUs without AVX2. `binding.gyp` now passes `-march=x86-64` on Linux x64 so the addon's own C++ is compiled for the x86-64 baseline, independent of the build host's compiler default (g++ on Ubuntu's amd64v3 variant defaults to `-march=x86-64-v3`). The `check-baseline-cpu` CI task now runs in an `ubuntu:24.04` container on an emulated `qemu64` CPU, catching this class of regression instead of the Haswell check that let AVX2 through ([#58](https://github.com/coder/libghostty-vt-node/pull/58) by @ThomasK33, fixes [#57](https://github.com/coder/libghostty-vt-node/issues/57)).
 
-## [v0.1.0-beta.5](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.5) - 2026-11-01
-
-## Fixed
+## [v0.1.0-beta.5](https://github.com/coder/libghostty-vt-node/releases/tag/v0.1.0-beta.5) - 2026-11-01## Fixed
 - The `linux-x64` prebuild no longer crashes with `Illegal instruction` (SIGILL) on CPUs without AVX-512. `v0.1.0-beta.4` was built for the release runner's CPU, so loading it and creating a terminal failed on many x86-64 machines and CI runners. libghostty-vt now builds with Zig's `-Dcpu=baseline` (override with `LIBGHOSTTY_VT_CPU`), and CI and the release workflow run the smoke example on an emulated Haswell CPU, which has AVX2 but no AVX-512 ([#55](https://github.com/coder/libghostty-vt-node/pull/55) by @ThomasK33).
 
 ## Changed
