@@ -6,6 +6,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace libghostty_vt_node {
 namespace {
@@ -188,6 +189,80 @@ bool MouseSizeEqual(const GhosttyMouseEncoderSize& left, const GhosttyMouseEncod
 
 void ThrowResult(Napi::Env env, const char* operation, GhosttyResult result) {
   throw Napi::Error::New(env, ResultMessage(operation, result));
+}
+
+// Frees the probe handles of MouseModesSignature on every path.
+struct MouseProbe {
+  GhosttyMouseEncoder encoder = nullptr;
+  GhosttyMouseEvent event = nullptr;
+  ~MouseProbe() {
+    if (event != nullptr) ghostty_mouse_event_free(event);
+    if (encoder != nullptr) ghostty_mouse_encoder_free(encoder);
+  }
+};
+
+// Ghostty v1.4.0 has no getter for the terminal's mouse tracking mode and
+// format. ghostty_mouse_encoder_setopt_from_terminal copies them into an
+// encoder, but it also clears that encoder's last motion cell. So copy them
+// into a throwaway encoder and encode three probe events with it:
+// - a shifted left press in cell 100 (pixel 1005): X10 tracking drops the
+//   modifier, and each format writes it differently (X10 and UTF-8 differ
+//   from cell 95 on, SGR-pixels writes pixels).
+// - a left-button drag: only button and any tracking report it.
+// - a buttonless motion: only any tracking reports it.
+// Two tracking mode and format pairs give the same bytes only when neither
+// reports any event, so equal results mean an unchanged mouse mode.
+std::string MouseModesSignature(Napi::Env env, GhosttyTerminal terminal) {
+  MouseProbe probe;
+  GhosttyResult result = ghostty_mouse_encoder_new(nullptr, &probe.encoder);
+  if (result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_mouse_encoder_new", result);
+  assert(probe.encoder != nullptr);
+  result = ghostty_mouse_event_new(nullptr, &probe.event);
+  if (result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_mouse_event_new", result);
+  assert(probe.event != nullptr);
+
+  ghostty_mouse_encoder_setopt_from_terminal(probe.encoder, terminal);
+  GhosttyMouseEncoderSize size = {};
+  size.size = sizeof(GhosttyMouseEncoderSize);
+  size.screen_width = 2000;
+  size.screen_height = 1000;
+  size.cell_width = 10;
+  size.cell_height = 10;
+  ghostty_mouse_encoder_setopt(probe.encoder, GHOSTTY_MOUSE_ENCODER_OPT_SIZE, &size);
+
+  struct ProbeEvent {
+    GhosttyMouseAction action;
+    bool left_button;
+    GhosttyMods mods;
+    GhosttyMousePosition position;
+  };
+  const ProbeEvent events[] = {
+      {GHOSTTY_MOUSE_ACTION_PRESS, true, GHOSTTY_MODS_SHIFT, {1005.0f, 5.0f}},
+      {GHOSTTY_MOUSE_ACTION_MOTION, true, 0, {5.0f, 5.0f}},
+      {GHOSTTY_MOUSE_ACTION_MOTION, false, 0, {5.0f, 5.0f}},
+  };
+  std::string signature;
+  for (const ProbeEvent& probe_event : events) {
+    ghostty_mouse_event_set_action(probe.event, probe_event.action);
+    if (probe_event.left_button) {
+      ghostty_mouse_event_set_button(probe.event, GHOSTTY_MOUSE_BUTTON_LEFT);
+    } else {
+      ghostty_mouse_event_clear_button(probe.event);
+    }
+    ghostty_mouse_event_set_mods(probe.event, probe_event.mods);
+    ghostty_mouse_event_set_position(probe.event, probe_event.position);
+
+    // The longest probe output is the SGR-pixels press "\x1b[<4;1005;5M".
+    char out[32] = {};
+    size_t written = 0;
+    result = ghostty_mouse_encoder_encode(probe.encoder, probe.event, out, sizeof(out), &written);
+    if (result != GHOSTTY_SUCCESS) ThrowResult(env, "ghostty_mouse_encoder_encode(probe)", result);
+    assert(written <= sizeof(out));
+    // The length prefix keeps the three outputs apart.
+    signature.push_back(static_cast<char>(written));
+    signature.append(out, written);
+  }
+  return signature;
 }
 
 }  // namespace
@@ -421,7 +496,14 @@ Napi::Value TerminalWrap::EncodeMouse(const Napi::CallbackInfo& info) {
   }
 
   if (mouse_modes_dirty_) {
-    ghostty_mouse_encoder_setopt_from_terminal(encoder, terminal);
+    // Reload the tracking mode and format only when output changed them, as
+    // the reload also clears Ghostty's same-cell motion deduplication.
+    std::string signature = MouseModesSignature(env, terminal);
+    assert(signature.size() >= 3 && "three length-prefixed probe outputs");
+    if (signature != mouse_modes_signature_) {
+      ghostty_mouse_encoder_setopt_from_terminal(encoder, terminal);
+      mouse_modes_signature_ = std::move(signature);
+    }
     mouse_modes_dirty_ = false;
   }
   if (!mouse_size_configured_ || !MouseSizeEqual(size, mouse_size_)) {
